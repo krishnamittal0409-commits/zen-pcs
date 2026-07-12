@@ -69,6 +69,15 @@ interface Component {
   benchmark_score: number | null;
 }
 
+interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  is_admin: boolean;
+  updated_at: string | null;
+}
+
 interface Ticket {
   id: number;
   name: string;
@@ -203,12 +212,18 @@ export default function AdminPage() {
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
 
+  // Users
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(true);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isAdmin) return;
     fetchOrders();
     fetchSubmissions();
     fetchComponents();
     fetchTickets();
+    fetchProfiles();
   }, [isAdmin]);
 
   async function fetchOrders() {
@@ -436,6 +451,27 @@ export default function AdminPage() {
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
     );
+  }
+
+  // ----- Users -----
+
+  async function fetchProfiles() {
+    setProfilesLoading(true);
+    setProfilesError(null);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      setProfilesError(error.message);
+      setProfilesLoading(false);
+      return;
+    }
+
+    setProfiles((data ?? []) as Profile[]);
+    setProfilesLoading(false);
   }
 
   const visibleComponents =
@@ -1010,7 +1046,58 @@ export default function AdminPage() {
             )}
 
             {activeTab === "users" && (
-              <p className="text-gray-500">Users — coming next.</p>
+              <div className="space-y-3">
+                {profilesLoading ? (
+                  <p className="text-gray-400">Loading users…</p>
+                ) : profilesError ? (
+                  <p className="text-sm text-red-500">
+                    Couldn&apos;t load users: {profilesError}
+                  </p>
+                ) : profiles.length === 0 ? (
+                  <p className="text-gray-500">No users yet.</p>
+                ) : (
+                  profiles.map((profile) => (
+                    <div
+                      key={profile.id}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
+                          {profile.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={profile.avatar_url}
+                              alt={profile.full_name ?? "User"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-gray-500">
+                              {(profile.full_name ?? profile.email ?? "?")[0]?.toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="font-semibold">
+                            {profile.full_name || "No name set"}
+                            {profile.is_admin && (
+                              <span className="ml-2 rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400">
+                                Admin
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500">{profile.email}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-600">
+                        Last updated:{" "}
+                        {profile.updated_at ? formatDate(profile.updated_at) : "—"}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
             {activeTab === "tickets" && (
               <div className="space-y-5">
