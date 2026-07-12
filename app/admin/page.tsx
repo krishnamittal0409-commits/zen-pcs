@@ -69,6 +69,27 @@ interface Component {
   benchmark_score: number | null;
 }
 
+interface Ticket {
+  id: number;
+  name: string;
+  email: string;
+  order_id: string | null;
+  category: string;
+  message: string;
+  status: string;
+  attachment_url: string | null;
+  created_at: string;
+}
+
+const TICKET_CATEGORY_LABELS: Record<string, string> = {
+  general: "General Question",
+  order_issue: "Order Issue",
+  byop: "Bring Your Parts",
+  warranty: "Warranty Claim",
+};
+
+const TICKET_STATUSES = ["open", "in_progress", "closed"];
+
 const CATEGORIES = ["cpu", "gpu", "motherboard", "ram", "storage", "psu", "cooling", "case"];
 
 const EMPTY_COMPONENT_FORM = {
@@ -140,6 +161,19 @@ function submissionStatusColor(status: string): string {
   }
 }
 
+function ticketStatusColor(status: string): string {
+  switch (status) {
+    case "open":
+      return "border-yellow-900 bg-yellow-950/40 text-yellow-400";
+    case "in_progress":
+      return "border-blue-900 bg-blue-950/40 text-blue-400";
+    case "closed":
+      return "border-green-900 bg-green-950/40 text-green-400";
+    default:
+      return "border-zinc-800 bg-zinc-900 text-gray-400";
+  }
+}
+
 export default function AdminPage() {
   const { user, loading: authLoading, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("orders");
@@ -164,11 +198,17 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState({ ...EMPTY_COMPONENT_FORM });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  // Support Tickets
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isAdmin) return;
     fetchOrders();
     fetchSubmissions();
     fetchComponents();
+    fetchTickets();
   }, [isAdmin]);
 
   async function fetchOrders() {
@@ -368,6 +408,34 @@ export default function AdminPage() {
     }
 
     fetchComponents();
+  }
+
+  // ----- Support Tickets -----
+
+  async function fetchTickets() {
+    setTicketsLoading(true);
+    setTicketsError(null);
+
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setTicketsError(error.message);
+      setTicketsLoading(false);
+      return;
+    }
+
+    setTickets((data ?? []) as Ticket[]);
+    setTicketsLoading(false);
+  }
+
+  async function updateTicketStatus(ticketId: number, newStatus: string) {
+    await supabase.from("support_tickets").update({ status: newStatus }).eq("id", ticketId);
+    setTickets((prev) =>
+      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
+    );
   }
 
   const visibleComponents =
@@ -945,7 +1013,80 @@ export default function AdminPage() {
               <p className="text-gray-500">Users — coming next.</p>
             )}
             {activeTab === "tickets" && (
-              <p className="text-gray-500">Support Tickets — coming next.</p>
+              <div className="space-y-5">
+                {ticketsLoading ? (
+                  <p className="text-gray-400">Loading tickets…</p>
+                ) : ticketsError ? (
+                  <p className="text-sm text-red-500">
+                    Couldn&apos;t load tickets: {ticketsError}
+                  </p>
+                ) : tickets.length === 0 ? (
+                  <p className="text-gray-500">No tickets yet.</p>
+                ) : (
+                  tickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-6 py-4">
+                        <div>
+                          <p className="font-semibold">Ticket #{ticket.id}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(ticket.created_at)} · {ticket.name} · {ticket.email}
+                          </p>
+                        </div>
+
+                        <select
+                          value={ticket.status}
+                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                          className={`rounded-full border px-4 py-1.5 text-xs font-medium capitalize ${ticketStatusColor(
+                            ticket.status
+                          )}`}
+                        >
+                          {TICKET_STATUSES.map((s) => (
+                            <option key={s} value={s} className="bg-black text-white capitalize">
+                              {s.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="px-6 py-4">
+                        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span className="rounded-full border border-zinc-700 px-3 py-1">
+                            {TICKET_CATEGORY_LABELS[ticket.category] ?? ticket.category}
+                          </span>
+                          {ticket.order_id && (
+                            <span className="rounded-full border border-zinc-700 px-3 py-1">
+                              Order ID: {ticket.order_id}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="whitespace-pre-wrap text-sm text-gray-300">
+                          {ticket.message}
+                        </p>
+
+                        {ticket.attachment_url && (
+                          <a
+                            href={ticket.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-block"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={ticket.attachment_url}
+                              alt="Ticket attachment"
+                              className="h-32 w-32 rounded-lg border border-zinc-700 object-cover hover:opacity-80"
+                            />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </>
         )}
