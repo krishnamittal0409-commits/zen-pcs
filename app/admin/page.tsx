@@ -75,6 +75,7 @@ interface Profile {
   avatar_url: string | null;
   email: string | null;
   is_admin: boolean;
+  is_head_admin: boolean;
   updated_at: string | null;
 }
 
@@ -472,6 +473,24 @@ export default function AdminPage() {
 
     setProfiles((data ?? []) as Profile[]);
     setProfilesLoading(false);
+  }
+
+  async function toggleAdminStatus(profileId: string, currentIsAdmin: boolean) {
+    setProfilesError(null);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_admin: !currentIsAdmin })
+      .eq("id", profileId);
+
+    if (error) {
+      setProfilesError(error.message);
+      return;
+    }
+
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === profileId ? { ...p, is_admin: !currentIsAdmin } : p))
+    );
   }
 
   const visibleComponents =
@@ -1062,38 +1081,60 @@ export default function AdminPage() {
                       className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
-                          {profile.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={profile.avatar_url}
-                              alt={profile.full_name ?? "User"}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-gray-500">
-                              {(profile.full_name ?? profile.email ?? "?")[0]?.toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <p className="font-semibold">
-                            {profile.full_name || "No name set"}
-                            {profile.is_admin && (
-                              <span className="ml-2 rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400">
-                                Admin
-                              </span>
+                        <div className="flex items-center gap-4">
+                          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
+                            {profile.avatar_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={profile.avatar_url}
+                                alt={profile.full_name ?? "User"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-gray-500">
+                                {(profile.full_name ?? profile.email ?? "?")[0]?.toUpperCase()}
+                              </div>
                             )}
-                          </p>
-                          <p className="text-xs text-gray-500">{profile.email}</p>
+                          </div>
+
+                          <div>
+                            <p className="font-semibold">
+                              {profile.full_name || "No name set"}
+                              {profile.is_head_admin ? (
+                                <span className="ml-2 rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400">
+                                  Head Admin
+                                </span>
+                              ) : profile.is_admin ? (
+                                <span className="ml-2 rounded-full border border-blue-800 bg-blue-950/40 px-2 py-0.5 text-xs text-blue-400">
+                                  Admin
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="text-xs text-gray-500">{profile.email}</p>
+                          </div>
                         </div>
                       </div>
 
-                      <p className="text-xs text-gray-600">
-                        Last updated:{" "}
-                        {profile.updated_at ? formatDate(profile.updated_at) : "—"}
-                      </p>
+                      <div className="flex items-center gap-4">
+                        <p className="text-xs text-gray-600">
+                          Last updated:{" "}
+                          {profile.updated_at ? formatDate(profile.updated_at) : "—"}
+                        </p>
+
+                        {!profile.is_head_admin && (
+                          <button
+                            type="button"
+                            onClick={() => toggleAdminStatus(profile.id, profile.is_admin)}
+                            className={`rounded-lg border px-4 py-2 text-xs font-semibold ${
+                              profile.is_admin
+                                ? "border-zinc-700 text-gray-400 hover:border-red-500 hover:text-red-500"
+                                : "border-red-600 bg-red-600 text-white hover:bg-red-700"
+                            }`}
+                          >
+                            {profile.is_admin ? "Remove Admin" : "Make Admin"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
