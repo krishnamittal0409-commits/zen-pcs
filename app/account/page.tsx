@@ -40,6 +40,14 @@ export default function AccountPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ----- Email/password sign-in state -----
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -130,6 +138,49 @@ export default function AccountPage() {
     setProfile((prev) => ({ ...(prev ?? { full_name: null }), avatar_url: avatarUrl }));
   }
 
+  async function handleEmailAuth() {
+    setAuthError(null);
+    setAuthMessage(null);
+
+    if (!email.trim() || !password.trim()) {
+      setAuthError("Enter both your email and password.");
+      return;
+    }
+
+    setAuthSubmitting(true);
+
+    if (authMode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      setAuthSubmitting(false);
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+      // No redirect needed — useAuth() picks up the new session and this
+      // page re-renders into the signed-in view automatically.
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      setAuthSubmitting(false);
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
+      setAuthMessage("Account created! Check your email to confirm, then sign in.");
+      setAuthMode("signin");
+    }
+  }
+
   const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
@@ -167,15 +218,98 @@ export default function AccountPage() {
         {authLoading || loading ? (
           <p className="text-gray-400">Loading…</p>
         ) : !user ? (
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center text-gray-400">
-            <p className="mb-4">Please sign in to view your account.</p>
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
-            >
-              Sign in with Google
-            </button>
+          <div className="mx-auto max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
+            <p className="mb-6 text-center text-gray-400">
+              {authMode === "signin"
+                ? "Sign in to view your account."
+                : "Create an account to get started."}
+            </p>
+
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="mb-2 block text-sm text-gray-400">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-400">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+                />
+              </div>
+
+              {authError && <p className="text-sm text-red-500">{authError}</p>}
+              {authMessage && <p className="text-sm text-green-400">{authMessage}</p>}
+
+              <button
+                type="button"
+                onClick={handleEmailAuth}
+                disabled={authSubmitting}
+                className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {authSubmitting
+                  ? "Please wait…"
+                  : authMode === "signin"
+                  ? "Sign In"
+                  : "Create Account"}
+              </button>
+
+              <div className="flex items-center gap-3 text-xs text-gray-600">
+                <div className="h-px flex-1 bg-zinc-800" />
+                OR
+                <div className="h-px flex-1 bg-zinc-800" />
+              </div>
+
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                className="rounded-xl border border-zinc-700 bg-black px-6 py-3 font-semibold text-white hover:bg-zinc-900"
+              >
+                Sign in with Google
+              </button>
+
+              <p className="text-center text-sm text-gray-500">
+                {authMode === "signin" ? (
+                  <>
+                    Don&apos;t have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("signup");
+                        setAuthError(null);
+                        setAuthMessage(null);
+                      }}
+                      className="text-red-500 hover:underline"
+                    >
+                      Sign up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("signin");
+                        setAuthError(null);
+                        setAuthMessage(null);
+                      }}
+                      className="text-red-500 hover:underline"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
