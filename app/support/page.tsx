@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We're finalizing our supported payment methods — check back soon, or raise a ticket below if you have a specific question.",
+      "We work on COD policy during delivery when our technician installs the product you can pay him via Cash/Card or Online (UPI).",
   },
   {
     question: "Can I track my order status?",
