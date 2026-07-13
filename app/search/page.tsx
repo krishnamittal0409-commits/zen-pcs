@@ -5,9 +5,15 @@ import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { readyPCs, ReadyPC } from "@/lib/ready-pcs-data";
 
 const supabase = createClient();
+
+interface PCResult {
+  id: number;
+  name: string;
+  price: number;
+  specs: string[];
+}
 
 interface ComponentResult {
   id: number;
@@ -29,7 +35,7 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [matchedPCs, setMatchedPCs] = useState<ReadyPC[]>([]);
+  const [matchedPCs, setMatchedPCs] = useState<PCResult[]>([]);
   const [matchedComponents, setMatchedComponents] = useState<ComponentResult[]>([]);
 
   async function handleSearch() {
@@ -39,22 +45,21 @@ export default function SearchPage() {
     setLoading(true);
     setSearched(true);
 
-    const lower = trimmed.toLowerCase();
-    const pcMatches = readyPCs.filter(
-      (pc) =>
-        pc.name.toLowerCase().includes(lower) ||
-        pc.specs.some((spec) => spec.toLowerCase().includes(lower))
-    );
+    const { data: pcData } = await supabase
+      .from("ready_pcs")
+      .select("id, name, price, specs")
+      .eq("active", true)
+      .ilike("name", `%${trimmed}%`);
 
-    const { data } = await supabase
+    const { data: compData } = await supabase
       .from("components")
       .select("id, name, category, price")
       .ilike("name", `%${trimmed}%`)
       .eq("active", true)
       .limit(20);
 
-    setMatchedPCs(pcMatches);
-    setMatchedComponents((data ?? []) as ComponentResult[]);
+    setMatchedPCs((pcData ?? []) as PCResult[]);
+    setMatchedComponents((compData ?? []) as ComponentResult[]);
     setLoading(false);
   }
 
@@ -102,7 +107,7 @@ export default function SearchPage() {
                     <div className="space-y-3">
                       {matchedPCs.map((pc) => (
                         <Link
-                          key={pc.name}
+                          key={pc.id}
                           href="/ready-pcs"
                           className="block rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition hover:border-red-500"
                         >

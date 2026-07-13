@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { readyPCs, ReadyPC } from "@/lib/ready-pcs-data";
 
 const supabase = createClient();
+
+interface ReadyPC {
+  id: number;
+  name: string;
+  price: number;
+  badge: string | null;
+  image: string | null;
+  specs: string[];
+}
 
 function formatPrice(value: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -19,8 +27,25 @@ function formatPrice(value: number): string {
 
 export default function ReadyPCsPage() {
   const { user, signInWithGoogle } = useAuth();
+  const [pcs, setPcs] = useState<ReadyPC[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
-  const [addingName, setAddingName] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchPCs() {
+      const { data } = await supabase
+        .from("ready_pcs")
+        .select("id, name, price, badge, image, specs")
+        .eq("active", true)
+        .order("price", { ascending: true });
+
+      setPcs((data ?? []) as ReadyPC[]);
+      setLoading(false);
+    }
+
+    fetchPCs();
+  }, []);
 
   async function handleAddToCart(pc: ReadyPC) {
     if (!user) {
@@ -28,7 +53,7 @@ export default function ReadyPCsPage() {
       return;
     }
 
-    setAddingName(pc.name);
+    setAddingId(pc.id);
 
     const { error: insertError } = await supabase.from("cart_items").insert({
       user_id: user.id,
@@ -37,7 +62,7 @@ export default function ReadyPCsPage() {
       quantity: 1,
     });
 
-    setAddingName(null);
+    setAddingId(null);
 
     if (insertError) {
       alert("Couldn't add to cart: " + insertError.message);
@@ -67,54 +92,64 @@ export default function ReadyPCsPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-8 pb-24">
-        <div className="grid gap-8 lg:grid-cols-3">
-          {readyPCs.map((pc) => (
-            <div
-              key={pc.name}
-              className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-3 hover:border-red-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)]"
-            >
-              <div className="relative flex h-80 items-center justify-center overflow-hidden border-b border-zinc-800 bg-black">
-                <span className="absolute right-4 top-4 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
-                  {pc.badge}
-                </span>
+        {loading ? (
+          <p className="text-gray-400">Loading…</p>
+        ) : pcs.length === 0 ? (
+          <p className="text-gray-500">No PCs available right now.</p>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-3">
+            {pcs.map((pc) => (
+              <div
+                key={pc.id}
+                className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-3 hover:border-red-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)]"
+              >
+                <div className="relative flex h-80 items-center justify-center overflow-hidden border-b border-zinc-800 bg-black">
+                  {pc.badge && (
+                    <span className="absolute right-4 top-4 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                      {pc.badge}
+                    </span>
+                  )}
 
-                <div className="absolute h-56 w-56 rounded-full bg-red-600/20 blur-3xl" />
+                  <div className="absolute h-56 w-56 rounded-full bg-red-600/20 blur-3xl" />
 
-                <Image
-                  src={pc.image}
-                  alt={pc.name}
-                  fill
-                  className="relative z-10 object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-                />
+                  {pc.image && (
+                    <Image
+                      src={pc.image}
+                      alt={pc.name}
+                      fill
+                      className="relative z-10 object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                    />
+                  )}
+                </div>
+
+                <div className="p-6">
+                  <h2 className="mb-2 text-2xl font-bold">
+                    {pc.name}
+                  </h2>
+
+                  <p className="mb-6 text-3xl font-black text-red-500">
+                    {formatPrice(pc.price)}
+                  </p>
+
+                  <ul className="mb-6 space-y-2 text-gray-300">
+                    {pc.specs.map((spec) => (
+                      <li key={spec}>✓ {spec}</li>
+                    ))}
+                  </ul>
+
+                  <button
+                    type="button"
+                    disabled={addingId === pc.id}
+                    onClick={() => handleAddToCart(pc)}
+                    className="w-full rounded-xl bg-red-600 py-3 font-semibold transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {addingId === pc.id ? "Adding..." : "Add to Cart"}
+                  </button>
+                </div>
               </div>
-
-              <div className="p-6">
-                <h2 className="mb-2 text-2xl font-bold">
-                  {pc.name}
-                </h2>
-
-                <p className="mb-6 text-3xl font-black text-red-500">
-                  {formatPrice(pc.price)}
-                </p>
-
-                <ul className="mb-6 space-y-2 text-gray-300">
-                  {pc.specs.map((spec) => (
-                    <li key={spec}>✓ {spec}</li>
-                  ))}
-                </ul>
-
-                <button
-                  type="button"
-                  disabled={addingName === pc.name}
-                  onClick={() => handleAddToCart(pc)}
-                  className="w-full rounded-xl bg-red-600 py-3 font-semibold transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {addingName === pc.name ? "Adding..." : "Add to Cart"}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {showSignInPrompt && (
