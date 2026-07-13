@@ -2,17 +2,27 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ShoppingCart, User } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
+const NAV_LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/ready-pcs", label: "Ready PCs" },
+  { href: "/pc-builder", label: "Custom Builder" },
+  { href: "/bring-your-parts", label: "Bring Your Own Parts" },
+  { href: "/fps-calculator", label: "FPS Calculator" },
+  { href: "/support", label: "Support" },
+];
+
 export default function Navbar() {
   const { user, loading } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -55,19 +65,18 @@ export default function Navbar() {
           </h1>
         </Link>
 
-        {/* Navigation */}
+        {/* Navigation — desktop only */}
         <div className="hidden items-center gap-8 text-sm font-medium text-white md:flex">
-          <Link href="/" className="transition hover:text-red-500">Home</Link>
-          <Link href="/ready-pcs" className="transition hover:text-red-500">Ready PCs</Link>
-          <Link href="/pc-builder" className="transition hover:text-red-500">Custom Builder</Link>
-          <Link href="/bring-your-parts" className="transition hover:text-red-500">Bring Your Own Parts</Link>
-          <Link href="/fps-calculator" className="transition hover:text-red-500">FPS Calculator</Link>
-          <Link href="/support" className="transition hover:text-red-500">Support</Link>
+          {NAV_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="transition hover:text-red-500">
+              {link.label}
+            </Link>
+          ))}
         </div>
 
         {/* Right Side Icons */}
         <div className="flex items-center gap-5 text-white">
-          <Link href="/search">
+          <Link href="/search" className="hidden sm:block">
             <Search size={20} className="cursor-pointer transition hover:text-red-500" />
           </Link>
 
@@ -96,8 +105,43 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+
+          {/* Hamburger — mobile only */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="md:hidden"
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileOpen && (
+        <div className="border-t border-zinc-800 bg-black px-6 py-4 md:hidden">
+          <div className="flex flex-col gap-4 text-sm font-medium text-white">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="transition hover:text-red-500"
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link
+              href="/search"
+              onClick={() => setMobileOpen(false)}
+              className="transition hover:text-red-500 sm:hidden"
+            >
+              Search
+            </Link>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
