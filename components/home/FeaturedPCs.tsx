@@ -57,12 +57,15 @@ export default function FeaturedPCs() {
             key={pc.name}
             className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-2 hover:border-red-500"
           >
-            <div className="relative flex h-64 items-center justify-center border-b border-zinc-800 bg-black">
+            <div className="relative flex h-80 items-center justify-center overflow-hidden border-b border-zinc-800 bg-black">
+              {/* Ambient glow behind the PC */}
+              <div className="absolute h-56 w-56 rounded-full bg-red-600/20 blur-3xl" />
+
               <Image
                 src={pc.image}
                 alt={pc.name}
                 fill
-                className="object-contain p-6"
+                className="relative z-10 object-contain p-2 transition-transform duration-300 group-hover:scale-105"
               />
             </div>
 

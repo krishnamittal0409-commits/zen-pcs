@@ -111,16 +111,19 @@ export default function ReadyPCsPage() {
               key={pc.name}
               className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-3 hover:border-red-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)]"
             >
-              <div className="relative flex h-64 items-center justify-center border-b border-zinc-800 bg-black">
-                <span className="absolute right-4 top-4 z-10 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
+              <div className="relative flex h-80 items-center justify-center overflow-hidden border-b border-zinc-800 bg-black">
+                <span className="absolute right-4 top-4 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
                   {pc.badge}
                 </span>
+
+                {/* Ambient glow behind the PC */}
+                <div className="absolute h-56 w-56 rounded-full bg-red-600/20 blur-3xl" />
 
                 <Image
                   src={pc.image}
                   alt={pc.name}
                   fill
-                  className="object-contain p-6"
+                  className="relative z-10 object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
 
