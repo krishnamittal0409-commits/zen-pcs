@@ -6,7 +6,7 @@ import Image from "next/image";
 
 export default function Hero() {
   return (
-    <section className="mx-auto flex min-h-[85vh] max-w-7xl items-center justify-between overflow-hidden px-8">
+    <section className="mx-auto flex max-w-7xl flex-col items-start justify-between overflow-hidden px-6 pb-16 pt-28 lg:min-h-[85vh] lg:flex-row lg:items-center lg:px-8 lg:pb-0 lg:pt-0">
       {/* Left Side */}
       <motion.div
         initial={{ opacity: 0, x: -60 }}
