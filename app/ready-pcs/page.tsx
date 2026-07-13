@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,6 +13,7 @@ const readyPCs = [
     name: "Zen Starter",
     price: 74999,
     badge: "Best Value",
+    image: "/images/pcs/zen-starter.png",
     specs: [
       "Ryzen 5 7600",
       "RTX 4060",
@@ -23,6 +25,7 @@ const readyPCs = [
     name: "Zen Pro",
     price: 124999,
     badge: "Best Seller",
+    image: "/images/pcs/zen-pro.png",
     specs: [
       "Ryzen 7 7800X3D",
       "RTX 4070 Super",
@@ -34,6 +37,7 @@ const readyPCs = [
     name: "Zen Ultra",
     price: 949999,
     badge: "Flagship",
+    image: "/images/pcs/zen-ultra.png",
     specs: [
       "Ryzen 9 9950X3D2",
       "RTX 5090",
@@ -108,13 +112,16 @@ export default function ReadyPCsPage() {
               className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-3 hover:border-red-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)]"
             >
               <div className="relative flex h-64 items-center justify-center border-b border-zinc-800 bg-black">
-                <span className="absolute right-4 top-4 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                <span className="absolute right-4 top-4 z-10 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider">
                   {pc.badge}
                 </span>
 
-                <span className="text-gray-500">
-                  PC Image Coming Soon
-                </span>
+                <Image
+                  src={pc.image}
+                  alt={pc.name}
+                  fill
+                  className="object-contain p-6"
+                />
               </div>
 
               <div className="p-6">

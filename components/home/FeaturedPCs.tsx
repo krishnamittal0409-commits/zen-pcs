@@ -1,10 +1,12 @@
 // components/home/FeaturedPCs.tsx
 import Link from "next/link";
+import Image from "next/image";
 
 const featuredPCs = [
   {
     name: "Zen Starter",
     price: "₹74,999",
+    image: "/images/pcs/zen-starter.png",
     specs: [
       "Ryzen 5 7600",
       "RTX 4060",
@@ -15,6 +17,7 @@ const featuredPCs = [
   {
     name: "Zen Pro",
     price: "₹1,24,999",
+    image: "/images/pcs/zen-pro.png",
     specs: [
       "Ryzen 7 7800X3D",
       "RTX 4070 Super",
@@ -25,6 +28,7 @@ const featuredPCs = [
   {
     name: "Zen Ultra",
     price: "₹9,49,999",
+    image: "/images/pcs/zen-ultra.png",
     specs: [
       "Ryzen 9 9950X3D2",
       "RTX 5090",
@@ -53,10 +57,13 @@ export default function FeaturedPCs() {
             key={pc.name}
             className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition-all duration-300 hover:-translate-y-2 hover:border-red-500"
           >
-            <div className="flex h-64 items-center justify-center border-b border-zinc-800 bg-black">
-              <span className="text-gray-500">
-                PC Image Coming Soon
-              </span>
+            <div className="relative flex h-64 items-center justify-center border-b border-zinc-800 bg-black">
+              <Image
+                src={pc.image}
+                alt={pc.name}
+                fill
+                className="object-contain p-6"
+              />
             </div>
 
             <div className="p-6">
