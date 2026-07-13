@@ -9,7 +9,7 @@ import Link from "next/link";
 
 const supabase = createClient();
 
-type Tab = "orders" | "byop" | "components" | "users" | "tickets";
+type Tab = "orders" | "byop" | "components" | "readypcs" | "users" | "tickets";
 
 interface OrderItem {
   id: number;
@@ -69,6 +69,17 @@ interface Component {
   benchmark_score: number | null;
 }
 
+interface ReadyPC {
+  id: number;
+  name: string;
+  price: number;
+  badge: string | null;
+  image: string | null;
+  specs: string[];
+  active: boolean;
+  created_at: string;
+}
+
 interface Profile {
   id: string;
   full_name: string | null;
@@ -118,6 +129,15 @@ const EMPTY_COMPONENT_FORM = {
   form_factor: "",
   image_url: "",
   benchmark_score: "",
+};
+
+const EMPTY_READY_PC_FORM = {
+  name: "",
+  price: "",
+  badge: "",
+  image: "",
+  specs: [] as string[],
+  active: true,
 };
 
 const ORDER_STATUSES = ["Pending", "Confirmed", "Shipped", "Completed", "Cancelled"];
@@ -208,6 +228,19 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState({ ...EMPTY_COMPONENT_FORM });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  // Ready PCs
+  const [readyPcs, setReadyPcs] = useState<ReadyPC[]>([]);
+  const [readyPcsLoading, setReadyPcsLoading] = useState(true);
+  const [readyPcsError, setReadyPcsError] = useState<string | null>(null);
+  const [showAddPcForm, setShowAddPcForm] = useState(false);
+  const [addPcForm, setAddPcForm] = useState({ ...EMPTY_READY_PC_FORM });
+  const [addPcSpecInput, setAddPcSpecInput] = useState("");
+  const [addPcSubmitting, setAddPcSubmitting] = useState(false);
+  const [editingPcId, setEditingPcId] = useState<number | null>(null);
+  const [editPcForm, setEditPcForm] = useState({ ...EMPTY_READY_PC_FORM });
+  const [editPcSpecInput, setEditPcSpecInput] = useState("");
+  const [editPcSubmitting, setEditPcSubmitting] = useState(false);
+
   // Support Tickets
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
@@ -223,6 +256,7 @@ export default function AdminPage() {
     fetchOrders();
     fetchSubmissions();
     fetchComponents();
+    fetchReadyPcs();
     fetchTickets();
     fetchProfiles();
   }, [isAdmin]);
@@ -426,6 +460,153 @@ export default function AdminPage() {
     fetchComponents();
   }
 
+  // ----- Ready PCs -----
+
+  async function fetchReadyPcs() {
+    setReadyPcsLoading(true);
+    setReadyPcsError(null);
+
+    const { data, error } = await supabase
+      .from("ready_pcs")
+      .select("*")
+      .order("price", { ascending: true });
+
+    if (error) {
+      setReadyPcsError(error.message);
+      setReadyPcsLoading(false);
+      return;
+    }
+
+    setReadyPcs((data ?? []) as ReadyPC[]);
+    setReadyPcsLoading(false);
+  }
+
+  function buildReadyPcPayload(form: typeof EMPTY_READY_PC_FORM) {
+    return {
+      name: form.name.trim(),
+      price: form.price === "" ? 0 : Number(form.price),
+      badge: form.badge.trim() || null,
+      image: form.image.trim() || null,
+      specs: form.specs,
+      active: form.active,
+    };
+  }
+
+  function addSpecLine(
+    target: "add" | "edit",
+    setForm: typeof setAddPcForm | typeof setEditPcForm,
+    value: string
+  ) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    setForm((prev) => ({ ...prev, specs: [...prev.specs, trimmed] }));
+
+    if (target === "add") setAddPcSpecInput("");
+    else setEditPcSpecInput("");
+  }
+
+  function removeSpecLine(
+    setForm: typeof setAddPcForm | typeof setEditPcForm,
+    index: number
+  ) {
+    setForm((prev) => ({
+      ...prev,
+      specs: prev.specs.filter((_, i) => i !== index),
+    }));
+  }
+
+  async function handleAddReadyPc() {
+    if (!addPcForm.name.trim()) {
+      setReadyPcsError("PC name is required.");
+      return;
+    }
+
+    setAddPcSubmitting(true);
+    setReadyPcsError(null);
+
+    const { error } = await supabase
+      .from("ready_pcs")
+      .insert(buildReadyPcPayload(addPcForm));
+
+    setAddPcSubmitting(false);
+
+    if (error) {
+      setReadyPcsError(error.message);
+      return;
+    }
+
+    setAddPcForm({ ...EMPTY_READY_PC_FORM });
+    setAddPcSpecInput("");
+    setShowAddPcForm(false);
+    fetchReadyPcs();
+  }
+
+  function startEditingPc(pc: ReadyPC) {
+    setEditingPcId(pc.id);
+    setEditPcForm({
+      name: pc.name,
+      price: String(pc.price ?? ""),
+      badge: pc.badge ?? "",
+      image: pc.image ?? "",
+      specs: [...pc.specs],
+      active: pc.active,
+    });
+    setEditPcSpecInput("");
+  }
+
+  async function handleSaveEditPc(id: number) {
+    setEditPcSubmitting(true);
+    setReadyPcsError(null);
+
+    const { error } = await supabase
+      .from("ready_pcs")
+      .update(buildReadyPcPayload(editPcForm))
+      .eq("id", id);
+
+    setEditPcSubmitting(false);
+
+    if (error) {
+      setReadyPcsError(error.message);
+      return;
+    }
+
+    setEditingPcId(null);
+    fetchReadyPcs();
+  }
+
+  async function handleDeleteReadyPc(id: number, name: string) {
+    const confirmed = window.confirm(`Delete "${name}"? This can't be undone.`);
+    if (!confirmed) return;
+
+    const { error } = await supabase.from("ready_pcs").delete().eq("id", id);
+
+    if (error) {
+      setReadyPcsError(error.message);
+      return;
+    }
+
+    fetchReadyPcs();
+  }
+
+  async function toggleReadyPcActive(pc: ReadyPC) {
+    setReadyPcsError(null);
+
+    const { error } = await supabase
+      .from("ready_pcs")
+      .update({ active: !pc.active })
+      .eq("id", pc.id);
+
+    if (error) {
+      setReadyPcsError(error.message);
+      return;
+    }
+
+    setReadyPcs((prev) =>
+      prev.map((p) => (p.id === pc.id ? { ...p, active: !p.active } : p))
+    );
+  }
+
   // ----- Support Tickets -----
 
   async function fetchTickets() {
@@ -527,6 +708,7 @@ export default function AdminPage() {
                   { key: "orders", label: "Orders" },
                   { key: "byop", label: "BYOP Submissions" },
                   { key: "components", label: "Components" },
+                  { key: "readypcs", label: "Ready PCs" },
                   { key: "users", label: "Users" },
                   { key: "tickets", label: "Support Tickets" },
                 ] as { key: Tab; label: string }[]
@@ -1050,6 +1232,316 @@ export default function AdminPage() {
                                 onClick={() =>
                                   handleDeleteComponent(component.id, component.name)
                                 }
+                                className="text-xs uppercase tracking-widest text-gray-500 hover:text-red-500"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ready PCs tab */}
+            {activeTab === "readypcs" && (
+              <div>
+                <div className="mb-5 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddPcForm((prev) => !prev);
+                      setReadyPcsError(null);
+                    }}
+                    className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  >
+                    {showAddPcForm ? "Cancel" : "+ Add Ready PC"}
+                  </button>
+                </div>
+
+                {readyPcsError && (
+                  <p className="mb-4 text-sm text-red-500">{readyPcsError}</p>
+                )}
+
+                {/* Add form */}
+                {showAddPcForm && (
+                  <div className="mb-6 rounded-2xl border border-red-900/60 bg-zinc-900 p-6">
+                    <h3 className="mb-4 text-lg font-bold">New Ready PC</h3>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                      <input
+                        placeholder="Name (e.g. Zen Starter)"
+                        value={addPcForm.name}
+                        onChange={(e) => setAddPcForm({ ...addPcForm, name: e.target.value })}
+                        className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                      />
+                      <input
+                        placeholder="Price"
+                        type="number"
+                        value={addPcForm.price}
+                        onChange={(e) => setAddPcForm({ ...addPcForm, price: e.target.value })}
+                        className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                      />
+                      <input
+                        placeholder="Badge (e.g. Best Value)"
+                        value={addPcForm.badge}
+                        onChange={(e) => setAddPcForm({ ...addPcForm, badge: e.target.value })}
+                        className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                      />
+                      <input
+                        placeholder="Image path (e.g. /images/pcs/zen-starter.png)"
+                        value={addPcForm.image}
+                        onChange={(e) => setAddPcForm({ ...addPcForm, image: e.target.value })}
+                        className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white sm:col-span-2"
+                      />
+                      <label className="flex items-center gap-2 text-sm text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={addPcForm.active}
+                          onChange={(e) =>
+                            setAddPcForm({ ...addPcForm, active: e.target.checked })
+                          }
+                          className="h-4 w-4 accent-red-600"
+                        />
+                        Active (visible to customers)
+                      </label>
+                    </div>
+
+                    {/* Specs list builder */}
+                    <div className="mt-5">
+                      <p className="mb-2 text-xs uppercase tracking-widest text-gray-500">
+                        Specs
+                      </p>
+
+                      {addPcForm.specs.length > 0 && (
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {addPcForm.specs.map((spec, i) => (
+                            <span
+                              key={`${spec}-${i}`}
+                              className="flex items-center gap-2 rounded-full border border-zinc-700 bg-black px-3 py-1.5 text-xs text-gray-300"
+                            >
+                              {spec}
+                              <button
+                                type="button"
+                                onClick={() => removeSpecLine(setAddPcForm, i)}
+                                className="text-gray-500 hover:text-red-500"
+                                aria-label={`Remove ${spec}`}
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3">
+                        <input
+                          placeholder="e.g. Ryzen 5 7600"
+                          value={addPcSpecInput}
+                          onChange={(e) => setAddPcSpecInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addSpecLine("add", setAddPcForm, addPcSpecInput);
+                            }
+                          }}
+                          className="flex-1 rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addSpecLine("add", setAddPcForm, addPcSpecInput)}
+                          className="shrink-0 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white"
+                        >
+                          + Add Spec
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddReadyPc}
+                      disabled={addPcSubmitting}
+                      className="mt-5 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                    >
+                      {addPcSubmitting ? "Adding…" : "Add Ready PC"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Ready PCs list */}
+                {readyPcsLoading ? (
+                  <p className="text-gray-400">Loading ready PCs…</p>
+                ) : readyPcs.length === 0 ? (
+                  <p className="text-gray-500">No ready PCs yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {readyPcs.map((pc) => (
+                      <div
+                        key={pc.id}
+                        className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+                      >
+                        {editingPcId === pc.id ? (
+                          <div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                              <input
+                                placeholder="Name"
+                                value={editPcForm.name}
+                                onChange={(e) =>
+                                  setEditPcForm({ ...editPcForm, name: e.target.value })
+                                }
+                                className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                              />
+                              <input
+                                placeholder="Price"
+                                type="number"
+                                value={editPcForm.price}
+                                onChange={(e) =>
+                                  setEditPcForm({ ...editPcForm, price: e.target.value })
+                                }
+                                className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                              />
+                              <input
+                                placeholder="Badge"
+                                value={editPcForm.badge}
+                                onChange={(e) =>
+                                  setEditPcForm({ ...editPcForm, badge: e.target.value })
+                                }
+                                className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                              />
+                              <input
+                                placeholder="Image path"
+                                value={editPcForm.image}
+                                onChange={(e) =>
+                                  setEditPcForm({ ...editPcForm, image: e.target.value })
+                                }
+                                className="rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white sm:col-span-2"
+                              />
+                              <label className="flex items-center gap-2 text-sm text-gray-300">
+                                <input
+                                  type="checkbox"
+                                  checked={editPcForm.active}
+                                  onChange={(e) =>
+                                    setEditPcForm({ ...editPcForm, active: e.target.checked })
+                                  }
+                                  className="h-4 w-4 accent-red-600"
+                                />
+                                Active
+                              </label>
+                            </div>
+
+                            <div className="mt-5">
+                              <p className="mb-2 text-xs uppercase tracking-widest text-gray-500">
+                                Specs
+                              </p>
+
+                              {editPcForm.specs.length > 0 && (
+                                <div className="mb-3 flex flex-wrap gap-2">
+                                  {editPcForm.specs.map((spec, i) => (
+                                    <span
+                                      key={`${spec}-${i}`}
+                                      className="flex items-center gap-2 rounded-full border border-zinc-700 bg-black px-3 py-1.5 text-xs text-gray-300"
+                                    >
+                                      {spec}
+                                      <button
+                                        type="button"
+                                        onClick={() => removeSpecLine(setEditPcForm, i)}
+                                        className="text-gray-500 hover:text-red-500"
+                                        aria-label={`Remove ${spec}`}
+                                      >
+                                        ✕
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex gap-3">
+                                <input
+                                  placeholder="e.g. RTX 4070 Super"
+                                  value={editPcSpecInput}
+                                  onChange={(e) => setEditPcSpecInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      addSpecLine("edit", setEditPcForm, editPcSpecInput);
+                                    }
+                                  }}
+                                  className="flex-1 rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    addSpecLine("edit", setEditPcForm, editPcSpecInput)
+                                  }
+                                  className="shrink-0 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white"
+                                >
+                                  + Add Spec
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditPc(pc.id)}
+                                disabled={editPcSubmitting}
+                                className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                              >
+                                {editPcSubmitting ? "Saving…" : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingPcId(null)}
+                                className="rounded-lg border border-zinc-700 px-5 py-2 text-sm font-semibold text-gray-300 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                              <p className="font-semibold">
+                                {pc.name}{" "}
+                                {pc.badge && (
+                                  <span className="ml-2 rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400">
+                                    {pc.badge}
+                                  </span>
+                                )}
+                                {!pc.active && (
+                                  <span className="ml-2 rounded-full border border-zinc-700 px-2 py-0.5 text-xs text-gray-500">
+                                    inactive
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {pc.specs.join(" · ") || "No specs added yet"}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <span className="font-semibold text-red-500">
+                                {formatPrice(pc.price)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleReadyPcActive(pc)}
+                                className="text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                              >
+                                {pc.active ? "Deactivate" : "Activate"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => startEditingPc(pc)}
+                                className="text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteReadyPc(pc.id, pc.name)}
                                 className="text-xs uppercase tracking-widest text-gray-500 hover:text-red-500"
                               >
                                 Delete
