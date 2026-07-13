@@ -5,28 +5,9 @@ import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { readyPCs, ReadyPC } from "@/lib/ready-pcs-data";
 
 const supabase = createClient();
-
-// Same data as app/ready-pcs/page.tsx — kept in sync manually since
-// Ready PCs aren't stored in Supabase yet.
-const readyPCs = [
-  {
-    name: "Zen Starter",
-    price: 74999,
-    specs: ["Ryzen 5 7600", "RTX 4060", "16GB DDR5", "1TB Gen 4 NVMe SSD"],
-  },
-  {
-    name: "Zen Pro",
-    price: 124999,
-    specs: ["Ryzen 7 7800X3D", "RTX 4070 Super", "32GB DDR5", "2TB Gen 4 NVMe SSD"],
-  },
-  {
-    name: "Zen Ultra",
-    price: 949999,
-    specs: ["Ryzen 9 9950X3D2", "RTX 5090", "64GB DDR5", "4TB Gen 5 NVMe SSD"],
-  },
-];
 
 interface ComponentResult {
   id: number;
@@ -48,7 +29,7 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [matchedPCs, setMatchedPCs] = useState<typeof readyPCs>([]);
+  const [matchedPCs, setMatchedPCs] = useState<ReadyPC[]>([]);
   const [matchedComponents, setMatchedComponents] = useState<ComponentResult[]>([]);
 
   async function handleSearch() {
@@ -58,7 +39,6 @@ export default function SearchPage() {
     setLoading(true);
     setSearched(true);
 
-    // Ready PCs — search locally (name or specs match)
     const lower = trimmed.toLowerCase();
     const pcMatches = readyPCs.filter(
       (pc) =>
@@ -66,7 +46,6 @@ export default function SearchPage() {
         pc.specs.some((spec) => spec.toLowerCase().includes(lower))
     );
 
-    // Components — search in Supabase
     const { data } = await supabase
       .from("components")
       .select("id, name, category, price")

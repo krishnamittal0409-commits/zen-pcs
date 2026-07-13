@@ -5,47 +5,9 @@ import Navbar from "@/components/layout/Navbar";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { readyPCs, ReadyPC } from "@/lib/ready-pcs-data";
 
 const supabase = createClient();
-
-const readyPCs = [
-  {
-    name: "Zen Starter",
-    price: 74999,
-    badge: "Best Value",
-    image: "/images/pcs/zen-starter.png",
-    specs: [
-      "Ryzen 5 7600",
-      "RTX 4060",
-      "16GB DDR5",
-      "1TB Gen 4 NVMe SSD",
-    ],
-  },
-  {
-    name: "Zen Pro",
-    price: 124999,
-    badge: "Best Seller",
-    image: "/images/pcs/zen-pro.png",
-    specs: [
-      "Ryzen 7 7800X3D",
-      "RTX 4070 Super",
-      "32GB DDR5",
-      "2TB Gen 4 NVMe SSD",
-    ],
-  },
-  {
-    name: "Zen Ultra",
-    price: 949999,
-    badge: "Flagship",
-    image: "/images/pcs/zen-ultra.png",
-    specs: [
-      "Ryzen 9 9950X3D2",
-      "RTX 5090",
-      "64GB DDR5",
-      "4TB Gen 5 NVMe SSD",
-    ],
-  },
-];
 
 function formatPrice(value: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -60,7 +22,7 @@ export default function ReadyPCsPage() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [addingName, setAddingName] = useState<string | null>(null);
 
-  async function handleAddToCart(pc: (typeof readyPCs)[number]) {
+  async function handleAddToCart(pc: ReadyPC) {
     if (!user) {
       setShowSignInPrompt(true);
       return;
@@ -116,7 +78,6 @@ export default function ReadyPCsPage() {
                   {pc.badge}
                 </span>
 
-                {/* Ambient glow behind the PC */}
                 <div className="absolute h-56 w-56 rounded-full bg-red-600/20 blur-3xl" />
 
                 <Image
