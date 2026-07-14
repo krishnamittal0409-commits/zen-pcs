@@ -45,26 +45,26 @@ type Component = {
 // a part guessing incorrectly.
 const KNOWN_MODEL_SCORES: { pattern: string; score: number }[] = [
   // CPUs
-  { pattern: "9950x3d", score: 99 },
+  { pattern: "9950x3d", score: 90 },
   { pattern: "9800x3d", score: 94 },
   { pattern: "7950x3d", score: 90 },
-  { pattern: "7800x3d", score: 85 },
+  { pattern: "7800x3d", score: 82 },
   { pattern: "13900k", score: 97 },
   { pattern: "13700k", score: 87 },
-  { pattern: "7600", score: 70 },
+  { pattern: "7600", score: 66 },
   { pattern: "5600", score: 55 },
   // GPUs
   { pattern: "5090", score: 100 },
-  { pattern: "5080", score: 92 },
+  { pattern: "5080", score: 91 },
   { pattern: "5070 ti", score: 82 },
   { pattern: "5070", score: 75 },
   { pattern: "4090", score: 96 },
   { pattern: "4080", score: 87 },
   { pattern: "4070 ti", score: 78 },
-  { pattern: "4070 super", score: 74 },
+  { pattern: "4070 super", score: 58 },
   { pattern: "4070", score: 68 },
   { pattern: "4060 ti", score: 55 },
-  { pattern: "4060", score: 45 },
+  { pattern: "4060", score: 34 },
   { pattern: "3060", score: 38 },
   { pattern: "1660", score: 22 },
 ];
@@ -213,9 +213,10 @@ export default function FpsCalculatorPage() {
         </p>
 
         <p className="mt-3 max-w-2xl text-sm text-gray-600">
-          Estimates are based on relative hardware performance, not
-          lab-tested benchmarks — actual FPS varies by game settings,
-          drivers, and background software.
+          Estimates are based on published relative-performance benchmarks
+          where available, and reasonable extrapolation elsewhere — not a
+          guarantee of exact in-game FPS. Actual results vary by game
+          settings, drivers, and background software.
         </p>
 
         {/* ---------- Two-column layout ---------- */}
