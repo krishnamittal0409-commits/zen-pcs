@@ -22,6 +22,14 @@ export const metadata: Metadata = {
     icon: "/icons/icon-192.png",
     apple: "/icons/icon-192.png",
   },
+  appleWebApp: {
+    // iOS ignores manifest.json for most of this — these tags are the
+    // actual source of truth for how the app behaves once added to the
+    // home screen on iPhone/iPad.
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Zen PCs",
+  },
 };
 
 // Controls the browser/OS chrome color when installed as a PWA.
@@ -39,6 +47,23 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Captures the install prompt event as early as possible — even
+            before React mounts — so InstallButton.tsx can pick it up
+            whenever it renders, instead of missing an event that fired
+            too early. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__deferredInstallPrompt = null;
+              window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.__deferredInstallPrompt = e;
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           {children}
