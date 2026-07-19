@@ -25,6 +25,22 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
+// Some image paths in the database were saved using Windows-style
+// backslashes (e.g. "images\pcs\zen-apex.png") and/or missing the leading
+// slash Next.js requires for local images. This fixes both issues so a
+// bad path can't crash the whole page — if it's already a proper local
+// path or a full http(s) URL, it's returned unchanged.
+function normalizeImagePath(path: string): string {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  const withForwardSlashes = path.replace(/\\/g, "/");
+  return withForwardSlashes.startsWith("/")
+    ? withForwardSlashes
+    : `/${withForwardSlashes}`;
+}
+
 export default function FeaturedPCs() {
   const [pcs, setPcs] = useState<ReadyPC[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +156,7 @@ export default function FeaturedPCs() {
 
               {pc.image && (
                 <Image
-                  src={pc.image}
+                  src={normalizeImagePath(pc.image)}
                   alt={pc.name}
                   fill
                   className="relative z-10 object-contain p-2 transition-transform duration-300 group-hover:scale-105"
