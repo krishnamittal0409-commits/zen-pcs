@@ -6,6 +6,7 @@ import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import InstallButton from "@/components/InstallButton";
 
 const supabase = createClient();
 
@@ -76,6 +77,12 @@ export default function Navbar() {
 
         {/* Right Side Icons */}
         <div className="flex items-center gap-5 text-white">
+          {/* Only renders itself once the browser says the app is
+              actually installable — invisible otherwise. */}
+          <div className="hidden sm:block">
+            <InstallButton />
+          </div>
+
           <Link href="/search" className="hidden sm:block">
             <Search size={20} className="cursor-pointer transition hover:text-red-500" />
           </Link>
@@ -122,6 +129,10 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="border-t border-zinc-800 bg-black px-6 py-4 md:hidden">
           <div className="flex flex-col gap-4 text-sm font-medium text-white">
+            {/* Shown here too, since the desktop-only slot above is hidden
+                on mobile widths — this is the version phone users see. */}
+            <InstallButton />
+
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
