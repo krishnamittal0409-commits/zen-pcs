@@ -65,7 +65,7 @@ const FAQS = [
   {
     question: "Can I track my order status?",
     answer:
-      "Order tracking is coming soon. For now, raise a ticket with your order ID below and we'll get back to you with an update.",
+      "Yes you can through your Account Dashboard.",
   },
 ];
 
