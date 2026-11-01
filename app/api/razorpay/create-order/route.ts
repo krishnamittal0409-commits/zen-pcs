@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpay } from "@/lib/razorpay";
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
@@ -34,13 +36,17 @@ export async function POST(request: Request) {
       },
     };
 
+    const razorpay = getRazorpay();
     const order = await razorpay.orders.create(options);
 
     return NextResponse.json({
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      keyId:
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+        process.env.RAZORPAY_KEY_ID ||
+        "rzp_test_Tv2S3vyatJ5ixW",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to create Razorpay order";
