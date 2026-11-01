@@ -40,6 +40,23 @@ function formatDate(value: string): string {
   });
 }
 
+function orderStatusBadgeClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s.includes("paid") || s.includes("completed")) {
+    return "border-emerald-800 bg-emerald-950/40 text-emerald-400";
+  }
+  if (s.includes("pending") || s.includes("cash")) {
+    return "border-yellow-900 bg-yellow-950/40 text-yellow-400";
+  }
+  if (s.includes("shipped")) {
+    return "border-purple-900 bg-purple-950/40 text-purple-400";
+  }
+  if (s.includes("cancelled")) {
+    return "border-red-900 bg-red-950/40 text-red-400";
+  }
+  return "border-blue-900 bg-blue-950/40 text-blue-400";
+}
+
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -119,7 +136,11 @@ export default function OrdersPage() {
                     <p className="font-semibold">Order #{order.id}</p>
                     <p className="text-xs text-gray-500">{formatDate(order.created_at)}</p>
                   </div>
-                  <span className="rounded-full border border-green-900 bg-green-950/40 px-4 py-1.5 text-xs font-medium text-green-400">
+                  <span
+                    className={`rounded-full border px-4 py-1.5 text-xs font-medium ${orderStatusBadgeClass(
+                      order.status
+                    )}`}
+                  >
                     {order.status}
                   </span>
                 </div>

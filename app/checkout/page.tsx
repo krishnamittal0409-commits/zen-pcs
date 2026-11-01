@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import Script from "next/script";
 
 const supabase = createClient();
 
@@ -15,6 +16,43 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+}
+
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => Promise<void>;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
+  theme?: {
+    color?: string;
+  };
+  modal?: {
+    ondismiss?: () => void;
+  };
+}
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayOptions) => {
+      open: () => void;
+      on: (event: string, callback: (response: { error: { description: string } }) => void) => void;
+    };
+  }
 }
 
 function formatPrice(value: number): string {
@@ -32,6 +70,7 @@ export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -60,15 +99,8 @@ export default function CheckoutPage() {
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  async function handlePlaceOrder() {
+  async function handleCodOrder() {
     if (!user) return;
-
-    if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
-      setFormError("Please fill in your name, phone, and address.");
-      return;
-    }
-
-    setFormError(null);
     setPlacingOrder(true);
 
     const { data: order, error: orderError } = await supabase
@@ -76,9 +108,10 @@ export default function CheckoutPage() {
       .insert({
         user_id: user.id,
         total,
+        status: "Pending (Cash on Delivery)",
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
-        customer_address: customerAddress.trim(),
+        customer_address: `${customerAddress.trim()}\n\n[Payment: Cash on Delivery / Pay on Setup]`,
       })
       .select()
       .single();
@@ -110,12 +143,158 @@ export default function CheckoutPage() {
     await supabase.from("cart_items").delete().in("id", cartIds);
 
     setPlacingOrder(false);
-    router.push(`/order-confirmation?order=${order.id}`);
+    router.push(`/order-confirmation?order=${order.id}&payment=cod`);
+  }
+
+  async function handleOnlinePayment() {
+    if (!user) return;
+    setPlacingOrder(true);
+
+    try {
+      // 1. Check if Razorpay script is loaded
+      if (typeof window === "undefined" || !window.Razorpay) {
+        setPlacingOrder(false);
+        setFormError("Razorpay SDK is still loading. Please try again in a few seconds.");
+        return;
+      }
+
+      // 2. Create order on backend via Razorpay Test API
+      const res = await fetch("/api/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: total }),
+      });
+
+      const orderData = await res.json();
+
+      if (!res.ok || !orderData.orderId) {
+        throw new Error(orderData.error || "Failed to initialize payment gateway");
+      }
+
+      // 3. Launch Razorpay modal with test configuration
+      const options: RazorpayOptions = {
+        key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+        amount: orderData.amount,
+        currency: orderData.currency || "INR",
+        name: "Zen PCs",
+        description: `Custom Gaming PC Order (${items.length} item${items.length > 1 ? "s" : ""})`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: customerName.trim(),
+          email: user.email ?? "",
+          contact: customerPhone.trim(),
+        },
+        theme: {
+          color: "#d6001c",
+        },
+        modal: {
+          ondismiss: () => {
+            setPlacingOrder(false);
+          },
+        },
+        handler: async (response: RazorpayResponse) => {
+          try {
+            // 4. Verify payment signature on the server
+            const verifyRes = await fetch("/api/razorpay/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (!verifyData.verified) {
+              alert("Payment verification failed: " + (verifyData.error || "Invalid signature"));
+              setPlacingOrder(false);
+              return;
+            }
+
+            // 5. Save order in Supabase with Paid status
+            const { data: order, error: orderError } = await supabase
+              .from("orders")
+              .insert({
+                user_id: user.id,
+                total,
+                status: "Paid (Online - Razorpay)",
+                customer_name: customerName.trim(),
+                customer_phone: customerPhone.trim(),
+                customer_address: `${customerAddress.trim()}\n\n[Payment: Paid Online via Razorpay (Test API) | Payment ID: ${response.razorpay_payment_id} | Order ID: ${response.razorpay_order_id}]`,
+              })
+              .select()
+              .single();
+
+            if (orderError || !order) {
+              alert("Payment was successful, but could not save order: " + (orderError?.message ?? "unknown error"));
+              setPlacingOrder(false);
+              return;
+            }
+
+            // 6. Save order items
+            const orderItemRows = items.map((item) => ({
+              order_id: order.id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            }));
+
+            await supabase.from("order_items").insert(orderItemRows);
+
+            // 7. Clear cart items
+            const cartIds = items.map((item) => item.id);
+            await supabase.from("cart_items").delete().in("id", cartIds);
+
+            setPlacingOrder(false);
+            router.push(`/order-confirmation?order=${order.id}&payment=online&payment_id=${response.razorpay_payment_id}`);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Error finalizing order";
+            alert("Error finalizing order: " + msg);
+            setPlacingOrder(false);
+          }
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (failResponse) => {
+        alert("Payment Failed: " + (failResponse.error?.description || "Transaction cancelled"));
+        setPlacingOrder(false);
+      });
+      rzp.open();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment error occurred";
+      setFormError(msg);
+      setPlacingOrder(false);
+    }
+  }
+
+  async function handlePlaceOrder() {
+    if (!user) return;
+
+    if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
+      setFormError("Please fill in your name, phone, and delivery address.");
+      return;
+    }
+
+    setFormError(null);
+
+    if (paymentMethod === "online") {
+      await handleOnlinePayment();
+    } else {
+      await handleCodOrder();
+    }
   }
 
   return (
     <main className="min-h-screen bg-black text-white">
       <Navbar />
+      {/* Load Razorpay Checkout Script */}
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="lazyOnload"
+      />
 
       <section className="mx-auto max-w-3xl px-8 py-24">
         <h1 className="mb-10 text-4xl font-black">
@@ -139,6 +318,7 @@ export default function CheckoutPage() {
           </div>
         ) : (
           <div className="space-y-8">
+            {/* Order Summary */}
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
               <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold">
                 <span className="h-6 w-1 rounded-full bg-red-600" />
@@ -166,6 +346,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {/* Customer Details */}
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
               <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold">
                 <span className="h-6 w-1 rounded-full bg-red-600" />
@@ -179,6 +360,7 @@ export default function CheckoutPage() {
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="e.g. John Doe"
                     className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
                   />
                 </div>
@@ -189,6 +371,7 @@ export default function CheckoutPage() {
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="e.g. +91 9876543210"
                     className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
                   />
                 </div>
@@ -199,6 +382,7 @@ export default function CheckoutPage() {
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
                     rows={3}
+                    placeholder="Enter complete delivery address with PIN code"
                     className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
                   />
                 </div>
@@ -207,25 +391,95 @@ export default function CheckoutPage() {
               {formError && <p className="mt-4 text-sm text-red-500">{formError}</p>}
             </div>
 
-            <div className="rounded-3xl border border-red-900/60 bg-zinc-900 p-8">
-              <h2 className="mb-3 flex items-center gap-3 text-xl font-bold">
-                <span className="h-5 w-1 rounded-full bg-red-600" />
-                Payment
+            {/* Payment Method Selection */}
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
+              <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold">
+                <span className="h-6 w-1 rounded-full bg-red-600" />
+                Payment Method
               </h2>
-              <p className="text-sm text-gray-400">
-                No payment is needed online. Our technician will come set up
-                your PC and show you how everything works — you can pay them
-                directly at that time, either in cash or online (UPI).
+              <p className="mb-6 text-sm text-gray-400">
+                Choose to pay online securely or pay on delivery when our technician sets up your PC.
               </p>
+
+              <div className="space-y-4">
+                {/* Option 1: Razorpay Online Payment */}
+                <label
+                  className={`flex cursor-pointer flex-col rounded-2xl border p-5 transition ${
+                    paymentMethod === "online"
+                      ? "border-red-600 bg-black/60 shadow-[0_0_15px_rgba(220,38,38,0.15)]"
+                      : "border-zinc-800 bg-black/20 hover:border-zinc-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="online"
+                        checked={paymentMethod === "online"}
+                        onChange={() => setPaymentMethod("online")}
+                        className="h-4 w-4 accent-red-600"
+                      />
+                      <span className="text-base font-bold text-white">
+                        Pay Online (Razorpay)
+                      </span>
+                    </div>
+                    <span className="rounded-full border border-amber-600/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+                      Test API Active
+                    </span>
+                  </div>
+                  <p className="mt-2 pl-7 text-sm text-gray-400">
+                    Pay securely using UPI (Google Pay, PhonePe, Paytm), Credit / Debit Card, or Net Banking via Razorpay Test mode.
+                  </p>
+                </label>
+
+                {/* Option 2: Cash on Delivery / Pay on Installation */}
+                <label
+                  className={`flex cursor-pointer flex-col rounded-2xl border p-5 transition ${
+                    paymentMethod === "cod"
+                      ? "border-red-600 bg-black/60 shadow-[0_0_15px_rgba(220,38,38,0.15)]"
+                      : "border-zinc-800 bg-black/20 hover:border-zinc-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cod"
+                        checked={paymentMethod === "cod"}
+                        onChange={() => setPaymentMethod("cod")}
+                        className="h-4 w-4 accent-red-600"
+                      />
+                      <span className="text-base font-bold text-white">
+                        Cash on Delivery (Pay on Installation)
+                      </span>
+                    </div>
+                    <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-xs font-semibold text-gray-300">
+                      Pay on Delivery
+                    </span>
+                  </div>
+                  <p className="mt-2 pl-7 text-sm text-gray-400">
+                    No payment is needed right now. Our technician will assemble and set up your PC at your doorstep — you can pay them directly via Cash or online (UPI).
+                  </p>
+                </label>
+              </div>
             </div>
 
+            {/* Place Order CTA Button */}
             <button
               type="button"
               onClick={handlePlaceOrder}
               disabled={placingOrder}
-              className="w-full rounded-xl bg-red-600 py-4 font-semibold hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-red-600 py-4 text-base font-bold transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {placingOrder ? "Placing Order..." : "Place Order"}
+              {placingOrder
+                ? paymentMethod === "online"
+                  ? "Opening Razorpay..."
+                  : "Placing Order..."
+                : paymentMethod === "online"
+                ? `Pay ${formatPrice(total)} Online`
+                : "Place Order (Cash on Delivery)"}
             </button>
           </div>
         )}

@@ -140,7 +140,7 @@ const EMPTY_READY_PC_FORM = {
   active: true,
 };
 
-const ORDER_STATUSES = ["Pending", "Confirmed", "Shipped", "Completed", "Cancelled"];
+const ORDER_STATUSES = ["Paid (Online - Razorpay)", "Pending (Cash on Delivery)", "Pending", "Confirmed", "Shipped", "Completed", "Cancelled"];
 const SUBMISSION_STATUSES = ["pending review", "approved", "rejected", "completed"];
 
 function formatPrice(value: number): string {
@@ -161,6 +161,9 @@ function formatDate(value: string): string {
 
 function orderStatusColor(status: string): string {
   switch (status) {
+    case "Paid (Online - Razorpay)":
+      return "border-emerald-800 bg-emerald-950/40 text-emerald-400";
+    case "Pending (Cash on Delivery)":
     case "Pending":
       return "border-yellow-900 bg-yellow-950/40 text-yellow-400";
     case "Confirmed":

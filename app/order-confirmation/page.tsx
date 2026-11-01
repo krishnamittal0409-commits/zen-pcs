@@ -35,14 +35,12 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
-// This inner component is the one that actually calls useSearchParams().
-// Next.js requires anything using that hook to be wrapped in <Suspense>
-// during a production build, hence splitting it out from the page's
-// default export below.
 function OrderConfirmationContent() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order");
+  const paymentParam = searchParams.get("payment");
+  const paymentIdParam = searchParams.get("payment_id");
 
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -75,6 +73,11 @@ function OrderConfirmationContent() {
     fetchOrder();
   }, [user, authLoading, orderId]);
 
+  const isOnlinePaid =
+    paymentParam === "online" ||
+    order?.status?.toLowerCase().includes("paid") ||
+    order?.status?.toLowerCase().includes("razorpay");
+
   return (
     <section className="mx-auto max-w-3xl px-8 py-24">
       {authLoading || loading ? (
@@ -89,20 +92,48 @@ function OrderConfirmationContent() {
         </div>
       ) : (
         <div className="space-y-8">
-          <div className="rounded-3xl border border-green-900 bg-green-950/20 p-8 text-center">
-            <h1 className="text-3xl font-black text-green-400">
-              Order Placed!
+          {/* Header Card */}
+          <div
+            className={`rounded-3xl border p-8 text-center ${
+              isOnlinePaid
+                ? "border-emerald-800/80 bg-emerald-950/20"
+                : "border-green-900 bg-green-950/20"
+            }`}
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              {isOnlinePaid ? "✓ Paid via Razorpay (Test Mode)" : "✓ Cash on Delivery Confirmed"}
+            </div>
+
+            <h1 className="text-3xl font-black text-white">
+              {isOnlinePaid ? "Payment Successful & Order Placed!" : "Order Placed Successfully!"}
             </h1>
-            <p className="mt-3 text-gray-300">
-              Order #{order.id} — {order.status}
+
+            <p className="mt-2 text-sm font-medium text-gray-300">
+              Order #{order.id} • Status: <span className="font-bold text-white">{order.status}</span>
             </p>
-            <p className="mx-auto mt-4 max-w-lg text-sm text-gray-400">
-              Our technician will contact you soon to schedule a visit,
-              set up your PC, and walk you through how everything works.
-              You can pay them then — cash or online (UPI).
+
+            {isOnlinePaid && paymentIdParam && (
+              <p className="mt-1 text-xs font-mono text-emerald-400">
+                Razorpay Payment ID: {paymentIdParam}
+              </p>
+            )}
+
+            <p className="mx-auto mt-4 max-w-lg text-sm text-gray-300 leading-relaxed">
+              {isOnlinePaid ? (
+                <>
+                  Your payment of <span className="font-bold text-emerald-400">{formatPrice(order.total)}</span> was
+                  verified successfully. Our technician will contact you soon to schedule a visit, deliver, and set up your dream PC.
+                </>
+              ) : (
+                <>
+                  Our technician will contact you soon to schedule a visit, deliver and assemble your PC. You can pay
+                  them directly at that time — either in cash or online (UPI).
+                </>
+              )}
             </p>
           </div>
 
+          {/* Order Items */}
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
             <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
               <span className="h-6 w-1 rounded-full bg-red-600" />
@@ -125,24 +156,36 @@ function OrderConfirmationContent() {
             <div className="my-4 border-t border-zinc-800" />
 
             <div className="flex items-center justify-between text-lg font-semibold">
-              <span>Total</span>
+              <span>Total Amount</span>
               <span className="text-red-500">{formatPrice(order.total)}</span>
             </div>
           </div>
 
+          {/* Delivery & Payment Details */}
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
             <h2 className="mb-4 flex items-center gap-3 text-xl font-bold">
               <span className="h-6 w-1 rounded-full bg-red-600" />
               Delivery Details
             </h2>
-            <p className="text-sm text-gray-400">{order.customer_name}</p>
-            <p className="text-sm text-gray-400">{order.customer_phone}</p>
-            <p className="text-sm text-gray-400">{order.customer_address}</p>
+            <div className="space-y-2 text-sm">
+              <p className="text-gray-300">
+                <span className="text-gray-500">Name: </span>
+                {order.customer_name}
+              </p>
+              <p className="text-gray-300">
+                <span className="text-gray-500">Phone: </span>
+                {order.customer_phone}
+              </p>
+              <div className="text-gray-300 whitespace-pre-line">
+                <span className="text-gray-500">Address & Info: </span>
+                {order.customer_address}
+              </div>
+            </div>
           </div>
 
           <Link
             href="/"
-            className="block w-full rounded-xl bg-red-600 py-4 text-center font-semibold hover:bg-red-700"
+            className="block w-full rounded-xl bg-red-600 py-4 text-center font-semibold transition hover:bg-red-700"
           >
             Back to Home
           </Link>

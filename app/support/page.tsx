@@ -60,7 +60,7 @@ const FAQS = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We work on COD policy during delivery when our technician installs the product you can pay him via Cash/Card or Online (UPI).",
+      "We accept secure online payments via Razorpay (UPI, Credit/Debit cards, Net Banking) as well as Cash on Delivery (COD), where you can pay our technician directly via Cash or online (UPI) during delivery and setup.",
   },
   {
     question: "Can I track my order status?",
