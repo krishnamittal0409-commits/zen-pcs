@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// Maximum single transaction limit allowed by Razorpay (RBI limit is ₹5,00,000)
+const MAX_RAZORPAY_LIMIT_INR = 500000;
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -13,7 +16,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - please sign in" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -23,8 +26,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid order amount" }, { status: 400 });
     }
 
-    // Razorpay expects amount in paise (1 INR = 100 paise)
-    const amountInPaise = Math.round(amount * 100);
+    // Razorpay has a maximum transaction limit of ₹5,00,000 (50,00,000 paise).
+    // For test mode on premium high-end builds (e.g. Zen Apex at ₹15L),
+    // cap the gateway test charge amount to ₹5,00,000 so the test transaction succeeds.
+    const chargeAmountInr = Math.min(amount, MAX_RAZORPAY_LIMIT_INR);
+    const amountInPaise = Math.round(chargeAmountInr * 100);
 
     const options = {
       amount: amountInPaise,
@@ -32,6 +38,7 @@ export async function POST(request: Request) {
       receipt: `rcpt_${Date.now()}_${user.id.slice(0, 8)}`,
       notes: {
         userId: user.id,
+        actualTotal: String(amount),
         environment: "test",
       },
     };
@@ -43,13 +50,21 @@ export async function POST(request: Request) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
+      actualAmount: amount,
+      isCappedForTest: amount > MAX_RAZORPAY_LIMIT_INR,
       keyId:
         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
         process.env.RAZORPAY_KEY_ID ||
         "rzp_test_Tv2S3vyatJ5ixW",
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to create Razorpay order";
+    let message = "Failed to create Razorpay order";
+    if (err instanceof Error) {
+      message = err.message;
+    } else if (typeof err === "object" && err !== null) {
+      const rzpErr = err as { error?: { description?: string }; message?: string };
+      message = rzpErr.error?.description || rzpErr.message || JSON.stringify(err);
+    }
     console.error("Razorpay order creation error:", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }

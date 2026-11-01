@@ -63,6 +63,27 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true));
+      existing.addEventListener("error", () => resolve(false));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -149,13 +170,13 @@ export default function CheckoutPage() {
   async function handleOnlinePayment() {
     if (!user) return;
     setPlacingOrder(true);
+    setFormError(null);
 
     try {
-      // 1. Check if Razorpay script is loaded
-      if (typeof window === "undefined" || !window.Razorpay) {
-        setPlacingOrder(false);
-        setFormError("Razorpay SDK is still loading. Please try again in a few seconds.");
-        return;
+      // 1. Ensure Razorpay script is loaded
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded || typeof window === "undefined" || !window.Razorpay) {
+        throw new Error("Unable to load Razorpay payment gateway. Please check your internet connection.");
       }
 
       // 2. Create order on backend via Razorpay Test API
@@ -171,18 +192,24 @@ export default function CheckoutPage() {
         throw new Error(orderData.error || "Failed to initialize payment gateway");
       }
 
+      // Format description and validate phone for Razorpay prefill
+      const cleanPhone = customerPhone.replace(/\D/g, "");
+      const isTenDigitPhone = cleanPhone.length >= 10;
+
       // 3. Launch Razorpay modal with test configuration
       const options: RazorpayOptions = {
-        key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+        key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_Tv2S3vyatJ5ixW",
         amount: orderData.amount,
         currency: orderData.currency || "INR",
         name: "Zen PCs",
-        description: `Custom Gaming PC Order (${items.length} item${items.length > 1 ? "s" : ""})`,
+        description: orderData.isCappedForTest
+          ? `Zen PCs Order (Gateway test limit: ₹5,00,000)`
+          : `Custom PC Order (${items.length} item${items.length > 1 ? "s" : ""})`,
         order_id: orderData.orderId,
         prefill: {
           name: customerName.trim(),
           email: user.email ?? "",
-          contact: customerPhone.trim(),
+          ...(isTenDigitPhone ? { contact: customerPhone.trim() } : {}),
         },
         theme: {
           color: "#d6001c",
@@ -290,7 +317,6 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <Navbar />
-      {/* Load Razorpay Checkout Script */}
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="lazyOnload"
@@ -388,7 +414,11 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {formError && <p className="mt-4 text-sm text-red-500">{formError}</p>}
+              {formError && (
+                <div className="mt-4 rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-400">
+                  {formError}
+                </div>
+              )}
             </div>
 
             {/* Payment Method Selection */}
@@ -431,6 +461,11 @@ export default function CheckoutPage() {
                   <p className="mt-2 pl-7 text-sm text-gray-400">
                     Pay securely using UPI (Google Pay, PhonePe, Paytm), Credit / Debit Card, or Net Banking via Razorpay Test mode.
                   </p>
+                  {total > 500000 && paymentMethod === "online" && (
+                    <p className="mt-2 pl-7 text-xs text-amber-400/90">
+                      ℹ️ Note: Indian payment gateways have a single-transaction limit of ₹5,00,000. In this test API mode, test checkout will authorize up to ₹5,00,000 and confirm your full build of {formatPrice(total)}.
+                    </p>
+                  )}
                 </label>
 
                 {/* Option 2: Cash on Delivery / Pay on Installation */}
