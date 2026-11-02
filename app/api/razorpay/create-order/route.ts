@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRazorpay } from "@/lib/razorpay";
+import { getRazorpay, getRazorpayKeys } from "@/lib/razorpay";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -10,13 +10,35 @@ const MAX_RAZORPAY_LIMIT_INR = 500000;
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+    let user = null;
+
+    // 1. Check user from session cookies
     const {
-      data: { user },
+      data: { user: cookieUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized - please sign in" }, { status: 401 });
+    if (!authError && cookieUser) {
+      user = cookieUser;
+    }
+
+    // 2. Fallback: Check user from Authorization Bearer token
+    if (!user) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const { data: tokenAuth } = await supabase.auth.getUser(token);
+        if (tokenAuth?.user) {
+          user = tokenAuth.user;
+        }
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized - please sign in to complete checkout" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -45,6 +67,7 @@ export async function POST(request: Request) {
 
     const razorpay = getRazorpay();
     const order = await razorpay.orders.create(options);
+    const { key_id } = getRazorpayKeys();
 
     return NextResponse.json({
       orderId: order.id,
@@ -52,18 +75,24 @@ export async function POST(request: Request) {
       currency: order.currency,
       actualAmount: amount,
       isCappedForTest: amount > MAX_RAZORPAY_LIMIT_INR,
-      keyId:
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-        process.env.RAZORPAY_KEY_ID ||
-        "rzp_test_Tv2S3vyatJ5ixW",
+      keyId: key_id,
     });
   } catch (err: unknown) {
     let message = "Failed to create Razorpay order";
     if (err instanceof Error) {
       message = err.message;
     } else if (typeof err === "object" && err !== null) {
-      const rzpErr = err as { error?: { description?: string }; message?: string };
-      message = rzpErr.error?.description || rzpErr.message || JSON.stringify(err);
+      const rzpErr = err as {
+        error?: { description?: string; message?: string };
+        message?: string;
+        description?: string;
+      };
+      message =
+        rzpErr.error?.description ||
+        rzpErr.error?.message ||
+        rzpErr.description ||
+        rzpErr.message ||
+        JSON.stringify(err);
     }
     console.error("Razorpay order creation error:", err);
     return NextResponse.json({ error: message }, { status: 500 });

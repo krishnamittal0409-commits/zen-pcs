@@ -7,13 +7,33 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+    let user = null;
+
     const {
-      data: { user },
+      data: { user: cookieUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authError && cookieUser) {
+      user = cookieUser;
+    }
+
+    if (!user) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const { data: tokenAuth } = await supabase.auth.getUser(token);
+        if (tokenAuth?.user) {
+          user = tokenAuth.user;
+        }
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized - please sign in" },
+        { status: 401 }
+      );
     }
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =

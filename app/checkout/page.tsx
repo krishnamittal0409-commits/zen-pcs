@@ -179,10 +179,18 @@ export default function CheckoutPage() {
         throw new Error("Unable to load Razorpay payment gateway. Please check your internet connection.");
       }
 
+      // Get current auth session token for authenticated API calls
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      };
+
       // 2. Create order on backend via Razorpay Test API
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ amount: total }),
       });
 
@@ -224,7 +232,7 @@ export default function CheckoutPage() {
             // 4. Verify payment signature on the server
             const verifyRes = await fetch("/api/razorpay/verify-payment", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: authHeaders,
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
