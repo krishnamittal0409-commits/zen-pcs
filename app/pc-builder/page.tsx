@@ -404,32 +404,74 @@ export default function PCBuilderPage() {
     const newBuild: Build = {};
 
     if (tier === "titan5090") {
-      newBuild.cpu = components.find((c) => c.name.includes("9950X") || c.name.includes("9800X3D") || c.name.includes("7800X3D"));
-      newBuild.gpu = components.find((c) => c.name.includes("5090"));
-      newBuild.motherboard = components.find((c) => c.name.includes("X870E") || c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.name.includes("128GB") || c.name.includes("64GB") || c.name.includes("32GB"));
-      newBuild.storage = components.find((c) => c.name.includes("4TB") || c.name.includes("Crucial T705") || c.name.includes("2TB"));
-      newBuild.psu = components.find((c) => c.name.includes("1200") || c.name.includes("1000"));
-      newBuild.cooling = components.find((c) => c.name.includes("LCD") || c.name.includes("360mm"));
-      newBuild.case = components.find((c) => c.name.includes("H9") || c.name.includes("O11") || c.name.includes("216"));
+      newBuild.cpu =
+        components.find((c) => c.category === "cpu" && c.name.includes("9950X")) ||
+        components.find((c) => c.category === "cpu" && c.name.includes("9800X3D")) ||
+        components.find((c) => c.category === "cpu" && c.name.includes("7800X3D"));
+      newBuild.gpu =
+        components.find((c) => c.category === "gpu" && c.name.includes("5090")) ||
+        components.find((c) => c.category === "gpu" && c.name.includes("4090"));
+      newBuild.motherboard =
+        components.find((c) => c.category === "motherboard" && c.name.includes("X870E")) ||
+        components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
+      newBuild.ram =
+        components.find((c) => c.category === "ram" && c.name.includes("128GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("64GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("32GB"));
+      newBuild.storage =
+        components.find((c) => c.category === "storage" && c.name.includes("4TB")) ||
+        components.find((c) => c.category === "storage" && c.name.includes("Crucial T705")) ||
+        components.find((c) => c.category === "storage" && c.name.includes("2TB"));
+      newBuild.psu =
+        components.find((c) => c.category === "psu" && c.name.includes("1200")) ||
+        components.find((c) => c.category === "psu" && c.name.includes("1000"));
+      newBuild.cooling =
+        components.find((c) => c.category === "cooling" && c.name.includes("LCD")) ||
+        components.find((c) => c.category === "cooling" && c.name.includes("360mm"));
+      newBuild.case =
+        components.find((c) => c.category === "case" && c.name.includes("O11")) ||
+        components.find((c) => c.category === "case" && c.name.includes("H9")) ||
+        components.find((c) => c.category === "case" && c.name.includes("216"));
     } else if (tier === "sweetspot5080") {
-      newBuild.cpu = components.find((c) => c.name.includes("7800X3D") || c.name.includes("9800X3D"));
-      newBuild.gpu = components.find((c) => c.name.includes("5080") || c.name.includes("4080"));
-      newBuild.motherboard = components.find((c) => c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.name.includes("32GB"));
-      newBuild.storage = components.find((c) => c.name.includes("2TB") || c.name.includes("1TB"));
-      newBuild.psu = components.find((c) => c.name.includes("850") || c.name.includes("750"));
-      newBuild.cooling = components.find((c) => c.name.includes("360mm") || c.name.includes("AK620"));
-      newBuild.case = components.find((c) => c.name.includes("216") || c.name.includes("4000D"));
+      newBuild.cpu =
+        components.find((c) => c.category === "cpu" && c.name.includes("7800X3D")) ||
+        components.find((c) => c.category === "cpu" && c.name.includes("9800X3D"));
+      newBuild.gpu =
+        components.find((c) => c.category === "gpu" && c.name.includes("5080")) ||
+        components.find((c) => c.category === "gpu" && c.name.includes("4080"));
+      newBuild.motherboard =
+        components.find((c) => c.category === "motherboard" && c.name.includes("TUF Gaming B650")) ||
+        components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
+      newBuild.ram =
+        components.find((c) => c.category === "ram" && c.name.includes("32GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("16GB"));
+      newBuild.storage =
+        components.find((c) => c.category === "storage" && c.name.includes("2TB")) ||
+        components.find((c) => c.category === "storage" && c.name.includes("1TB"));
+      newBuild.psu =
+        components.find((c) => c.category === "psu" && c.name.includes("850")) ||
+        components.find((c) => c.category === "psu" && c.name.includes("750"));
+      newBuild.cooling =
+        components.find((c) => c.category === "cooling" && c.name.includes("360mm")) ||
+        components.find((c) => c.category === "cooling" && c.name.includes("AK620"));
+      newBuild.case =
+        components.find((c) => c.category === "case" && c.name.includes("216")) ||
+        components.find((c) => c.category === "case" && c.name.includes("4000D"));
     } else {
-      newBuild.cpu = components.find((c) => c.name.includes("7600"));
-      newBuild.gpu = components.find((c) => c.name.includes("4060"));
-      newBuild.motherboard = components.find((c) => c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.name.includes("16GB"));
-      newBuild.storage = components.find((c) => c.name.includes("1TB"));
-      newBuild.psu = components.find((c) => c.name.includes("650") || c.name.includes("750"));
-      newBuild.cooling = components.find((c) => c.name.includes("AG400") || c.name.includes("AK620"));
-      newBuild.case = components.find((c) => c.name.includes("ICE-112") || c.name.includes("216"));
+      newBuild.cpu =
+        components.find((c) => c.category === "cpu" && c.name.includes("7600") && !c.name.includes("7600X")) ||
+        components.find((c) => c.category === "cpu" && c.name.includes("7600"));
+      newBuild.gpu =
+        components.find((c) => c.category === "gpu" && c.name.includes("4060") && !c.name.includes("Ti")) ||
+        components.find((c) => c.category === "gpu" && c.name.includes("4060"));
+      newBuild.motherboard =
+        components.find((c) => c.category === "motherboard" && c.name.includes("Pro B650M-P")) ||
+        components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
+      newBuild.ram = components.find((c) => c.category === "ram" && c.name.includes("16GB"));
+      newBuild.storage = components.find((c) => c.category === "storage" && c.name.includes("1TB"));
+      newBuild.psu = components.find((c) => c.category === "psu" && c.name.includes("650"));
+      newBuild.cooling = components.find((c) => c.category === "cooling" && c.name.includes("AG400"));
+      newBuild.case = components.find((c) => c.category === "case" && c.name.includes("ICE-112"));
     }
 
     setBuild(newBuild);
@@ -601,8 +643,8 @@ export default function PCBuilderPage() {
                           >
                             <option value="">-- Choose {cat.label} --</option>
                             {options.map((opt) => (
-                              <option key={opt.id} value={opt.id}>
-                                {opt.name} ({formatPrice(opt.price)})
+                              <option key={opt.id} value={opt.id} disabled={opt.stock <= 0}>
+                                {opt.name} ({formatPrice(opt.price)}){opt.stock <= 0 ? " • Out of stock" : ""}
                               </option>
                             ))}
                           </select>
@@ -716,6 +758,32 @@ export default function PCBuilderPage() {
                 <ShieldCheck className="h-5 w-5 text-red-500" />
                 Build Summary & Total
               </h3>
+
+              {/* Itemized Hardware Checklist */}
+              <div className="mt-4 space-y-2.5 text-xs border-b border-zinc-800/80 pb-4">
+                {CATEGORIES.map((cat) => {
+                  const item = build[cat.key];
+                  return (
+                    <div key={cat.key} className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-zinc-400 shrink-0">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            item ? "bg-red-500 shadow-xs shadow-red-500" : "bg-zinc-700"
+                          }`}
+                        />
+                        {cat.label}
+                      </span>
+                      <span
+                        className={`truncate text-right text-[11px] font-medium ${
+                          item ? "text-white" : "text-zinc-600"
+                        }`}
+                      >
+                        {item ? item.name : "Not selected"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
 
               {/* Compatibility Status Box */}
               <div
