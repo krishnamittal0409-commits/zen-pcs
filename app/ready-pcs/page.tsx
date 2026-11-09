@@ -20,6 +20,10 @@ import {
   SlidersHorizontal,
   X,
   ShoppingCart,
+  Info,
+  MapPin,
+  Gauge,
+  Thermometer,
 } from "lucide-react";
 
 const supabase = createClient();
@@ -32,6 +36,19 @@ interface ReadyPC {
   image: string | null;
   specs: string[];
   category?: "flagship" | "1440p" | "1080p" | "creator";
+  detailedSpecs?: {
+    cpu: string;
+    gpu: string;
+    ram: string;
+    motherboard: string;
+    storage: string;
+    cooler: string;
+    psu: string;
+    case: string;
+    cs2Fps: number;
+    cyberpunkFps: number;
+    thermalMax: string;
+  };
 }
 
 const FALLBACK_PCS: ReadyPC[] = [
@@ -50,6 +67,19 @@ const FALLBACK_PCS: ReadyPC[] = [
       "360mm ARGB AIO Liquid Cooler",
       "1000W ATX 3.0 Platinum PSU",
     ],
+    detailedSpecs: {
+      cpu: "AMD Ryzen 7 9800X3D (8C/16T, 5.2 GHz, 96MB 3D V-Cache)",
+      gpu: "NVIDIA GeForce RTX 5090 32GB GDDR7 (21,760 CUDA Cores)",
+      ram: "64GB (2x32GB) DDR5 6000MHz CL30 Low-Latency EXPO",
+      motherboard: "ASUS ROG Strix X870E-E Gaming WiFi (PCIe 5.0)",
+      storage: "2TB Crucial T705 Gen5 NVMe (14,500 MB/s Read)",
+      cooler: "Corsair iCUE LINK H150i RGB 360mm AIO Liquid Cooler",
+      psu: "Corsair RM1000x 1000W ATX 3.0 80+ Platinum",
+      case: "NZXT H9 Flow Dual-Chamber Tempered Glass Case",
+      cs2Fps: 910,
+      cyberpunkFps: 145,
+      thermalMax: "68°C GPU / 72°C CPU Under Full Load",
+    },
   },
   {
     id: 102,
@@ -66,6 +96,19 @@ const FALLBACK_PCS: ReadyPC[] = [
       "240mm Liquid AIO Cooler",
       "850W ATX 3.0 Gold Certified PSU",
     ],
+    detailedSpecs: {
+      cpu: "AMD Ryzen 7 7800X3D (8C/16T, 5.0 GHz 3D V-Cache)",
+      gpu: "NVIDIA GeForce RTX 5080 16GB GDDR7 (10,752 CUDA Cores)",
+      ram: "32GB (2x16GB) DDR5 6000MHz CL30 EXPO",
+      motherboard: "MSI MAG B650 Tomahawk WiFi",
+      storage: "2TB Samsung 990 Pro PCIe 4.0 NVMe (7,450 MB/s)",
+      cooler: "DeepCool LS520 SE 240mm Liquid Cooler",
+      psu: "Corsair RM850e 850W ATX 3.0 80+ Gold",
+      case: "Lian Li Lancool 216 RGB High Airflow",
+      cs2Fps: 720,
+      cyberpunkFps: 115,
+      thermalMax: "66°C GPU / 74°C CPU Under Full Load",
+    },
   },
   {
     id: 103,
@@ -82,6 +125,19 @@ const FALLBACK_PCS: ReadyPC[] = [
       "Dual-Tower Air Cooler (220W TDP)",
       "750W 80+ Gold Power Supply",
     ],
+    detailedSpecs: {
+      cpu: "AMD Ryzen 5 7600X (6C/12T, 5.3 GHz AM5)",
+      gpu: "NVIDIA GeForce RTX 4070 Super 12GB GDDR6X",
+      ram: "32GB (2x16GB) DDR5 5600MHz High-Speed RAM",
+      motherboard: "MSI B650 Gaming Plus WiFi",
+      storage: "1TB WD Black SN850X Gen4 NVMe M.2 SSD",
+      cooler: "DeepCool AK620 Dual-Tower High Performance Cooler",
+      psu: "Corsair RM750e 750W 80+ Gold Certified",
+      case: "Lian Li Lancool 216 Mesh Airflow",
+      cs2Fps: 540,
+      cyberpunkFps: 82,
+      thermalMax: "64°C GPU / 71°C CPU Under Full Load",
+    },
   },
   {
     id: 104,
@@ -98,6 +154,19 @@ const FALLBACK_PCS: ReadyPC[] = [
       "Airflow Mesh ARGB Case with 4 Fans",
       "650W 80+ Bronze Certified PSU",
     ],
+    detailedSpecs: {
+      cpu: "AMD Ryzen 5 5600X (6C/12T, 4.6 GHz)",
+      gpu: "NVIDIA GeForce RTX 4060 8GB GDDR6",
+      ram: "16GB (2x8GB) DDR4 3600MHz Dual Channel",
+      motherboard: "Gigabyte B550M DS3H AC",
+      storage: "1TB Kingston NV2 PCIe 4.0 NVMe SSD",
+      cooler: "DeepCool AG400 ARGB Tower Cooler",
+      psu: "Cooler Master MWE 650W 80+ Bronze",
+      case: "Ant Esports ICE-200TG Mid Tower ARGB",
+      cs2Fps: 380,
+      cyberpunkFps: 55,
+      thermalMax: "62°C GPU / 68°C CPU Under Full Load",
+    },
   },
 ];
 
@@ -126,6 +195,13 @@ export default function ReadyPCsPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc">("featured");
 
+  // Inspect Modal State
+  const [inspectingPc, setInspectingPc] = useState<ReadyPC | null>(null);
+
+  // Delivery Pincode Checker State
+  const [pincode, setPincode] = useState("");
+  const [pincodeStatus, setPincodeStatus] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchPCs() {
       try {
@@ -136,7 +212,15 @@ export default function ReadyPCsPage() {
           .order("price", { ascending: false });
 
         if (!error && data && data.length > 0) {
-          setPcs(data as ReadyPC[]);
+          // Merge with detailed specs
+          const merged = data.map((d) => {
+            const match = FALLBACK_PCS.find((f) => f.name.toLowerCase() === d.name.toLowerCase());
+            return {
+              ...d,
+              detailedSpecs: match?.detailedSpecs || FALLBACK_PCS[0].detailedSpecs,
+            };
+          });
+          setPcs(merged as ReadyPC[]);
         }
       } catch (err) {
         console.warn("Using fallback pre-configured builds:", err);
@@ -171,6 +255,7 @@ export default function ReadyPCsPage() {
 
       setAddedNotification(`${pc.name} added to cart!`);
       setTimeout(() => setAddedNotification(null), 4000);
+      if (inspectingPc) setInspectingPc(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -178,7 +263,15 @@ export default function ReadyPCsPage() {
     }
   }
 
-  // Filter & Sort
+  function handleCheckPincode() {
+    const clean = pincode.trim();
+    if (clean.length === 6 && /^\d+$/.test(clean)) {
+      setPincodeStatus(`✓ Eligible for Free Doorstep Setup & 48h Delivery to PIN ${clean}`);
+    } else {
+      setPincodeStatus("Please enter a valid 6-digit Indian PIN code");
+    }
+  }
+
   const displayedPCs = useMemo(() => {
     let list = [...pcs];
 
@@ -220,14 +313,14 @@ export default function ReadyPCsPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm sm:text-base text-zinc-400">
-                Boutique desktop configurations handcrafted with premium thermal paste,
-                surgical cable routing, and guaranteed 48-hour burn-in stability.
+                Boutique desktop configurations handcrafted with surgical cable routing,
+                48-hour thermal stress-testing, and white-glove doorstep delivery.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-2 text-xs">
+            <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-3 text-xs">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="text-zinc-300">3-Year On-Site Warranty Included</span>
+              <span className="text-zinc-300">3-Year On-Site Comprehensive Warranty</span>
             </div>
           </div>
 
@@ -258,7 +351,7 @@ export default function ReadyPCsPage() {
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              <span className="text-xs font-semibold text-zinc-400">Sort by:</span>
+              <span className="text-xs font-semibold text-zinc-400">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
@@ -292,7 +385,6 @@ export default function ReadyPCsPage() {
 
               {/* Hardware Preview Card */}
               <div className="relative flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-zinc-800/60 bg-black/60">
-                {/* Internal Glow Circle */}
                 <div className="absolute h-52 w-52 rounded-full bg-red-600/15 blur-2xl transition-all group-hover:scale-125 group-hover:bg-red-600/25" />
 
                 <div className="relative h-64 w-64">
@@ -335,16 +427,25 @@ export default function ReadyPCsPage() {
                   </ul>
                 </div>
 
-                {/* Actions */}
-                <div className="mt-6 pt-4 border-t border-zinc-800/60">
+                {/* Dual Action Buttons */}
+                <div className="mt-6 grid grid-cols-2 gap-3 pt-4 border-t border-zinc-800/60">
+                  <button
+                    type="button"
+                    onClick={() => setInspectingPc(pc)}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900/80 py-3 text-xs font-bold text-zinc-200 transition hover:border-red-500 hover:text-white"
+                  >
+                    <Info className="h-3.5 w-3.5 text-red-500" />
+                    <span>Inspect Specs</span>
+                  </button>
+
                   <button
                     type="button"
                     disabled={addingId === pc.id}
                     onClick={() => handleAddToCart(pc)}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 hover:shadow-red-600/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-red-600 py-3 text-xs font-bold text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 hover:shadow-red-600/40 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>{addingId === pc.id ? "Adding to Cart..." : "Add to Cart"}</span>
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    <span>{addingId === pc.id ? "Adding..." : "Add to Cart"}</span>
                   </button>
                 </div>
               </div>
@@ -352,6 +453,151 @@ export default function ReadyPCsPage() {
           ))}
         </div>
       </section>
+
+      {/* Inspect Rig Specs & Benchmark Modal */}
+      <AnimatePresence>
+        {inspectingPc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => setInspectingPc(null)}
+                className="absolute right-6 top-6 rounded-full border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-red-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                  {inspectingPc.badge || "System Specs"}
+                </span>
+                <span className="text-xs text-zinc-400">Architecture Spec Sheet</span>
+              </div>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+                {inspectingPc.name}
+              </h2>
+
+              <div className="mt-1 text-2xl font-black text-red-500">
+                {formatPrice(inspectingPc.price)}
+              </div>
+
+              {/* Hardware Details Table */}
+              <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-xs space-y-3">
+                <h4 className="font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-800 pb-2">
+                  Part-by-Part Component Hardware
+                </h4>
+                {inspectingPc.detailedSpecs && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Processor:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.cpu}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Graphics Card:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.gpu}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">System Memory:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.ram}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Motherboard:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.motherboard}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Storage NVMe:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.storage}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Thermal Cooler:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.cooler}</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-zinc-800/40">
+                      <span className="text-zinc-400">Power Supply:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.psu}</strong>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-zinc-400">Chassis:</span>
+                      <strong className="text-white text-right">{inspectingPc.detailedSpecs.case}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Benchmarks & Thermal Strip */}
+              {inspectingPc.detailedSpecs && (
+                <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                    <span className="block text-[10px] uppercase tracking-wider text-zinc-400">CS2 Comp FPS</span>
+                    <span className="text-xl font-black text-red-500">{inspectingPc.detailedSpecs.cs2Fps} FPS</span>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                    <span className="block text-[10px] uppercase tracking-wider text-zinc-400">Cyberpunk RT</span>
+                    <span className="text-xl font-black text-amber-400">{inspectingPc.detailedSpecs.cyberpunkFps} FPS</span>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                    <span className="block text-[10px] uppercase tracking-wider text-zinc-400">Acoustics / Thermals</span>
+                    <span className="text-xs font-bold text-emerald-400">{inspectingPc.detailedSpecs.thermalMax.split(" ")[0]}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Pincode Availability Checker Widget */}
+              <div className="mt-6 rounded-2xl border border-zinc-800 bg-black/60 p-4">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                  <MapPin className="h-3.5 w-3.5 text-red-500" />
+                  Check Doorstep Technician Availability
+                </span>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    placeholder="Enter 6-digit PIN code (e.g. 110001, 131001)"
+                    maxLength={6}
+                    className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus:border-red-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCheckPincode}
+                    className="rounded-xl bg-zinc-800 px-4 py-2 text-xs font-bold text-white hover:bg-zinc-700"
+                  >
+                    Check PIN
+                  </button>
+                </div>
+                {pincodeStatus && (
+                  <p className="mt-2 text-xs font-medium text-emerald-400">{pincodeStatus}</p>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-zinc-800/80">
+                <button
+                  type="button"
+                  onClick={() => setInspectingPc(null)}
+                  className="rounded-xl border border-zinc-800 px-5 py-2.5 text-xs font-semibold text-zinc-400 hover:text-white"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddToCart(inspectingPc)}
+                  className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-red-600/30 hover:bg-red-700"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Add To Cart ({formatPrice(inspectingPc.price)})</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Added Notification Toast */}
       <AnimatePresence>

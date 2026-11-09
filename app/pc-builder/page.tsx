@@ -6,6 +6,23 @@ import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Cpu,
+  Tv,
+  Layers,
+  HardDrive,
+  Zap,
+  ShieldCheck,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  ShoppingCart,
+  Sliders,
+  Gauge,
+  ArrowRight,
+} from "lucide-react";
 
 const supabase = createClient();
 
@@ -47,6 +64,7 @@ type Build = Partial<Record<CategoryKey, ComponentRow>>;
 interface CategoryConfig {
   key: CategoryKey;
   label: string;
+  icon: any;
 }
 
 interface CompatibilityIssue {
@@ -55,18 +73,18 @@ interface CompatibilityIssue {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Config & helpers                                                        */
+/*  Config & Helpers                                                         */
 /* -------------------------------------------------------------------------- */
 
 const CATEGORIES: CategoryConfig[] = [
-  { key: "cpu", label: "Processor" },
-  { key: "motherboard", label: "Motherboard" },
-  { key: "ram", label: "Memory" },
-  { key: "gpu", label: "Graphics Card" },
-  { key: "storage", label: "Storage" },
-  { key: "psu", label: "Power Supply" },
-  { key: "cooling", label: "Cooling" },
-  { key: "case", label: "Case" },
+  { key: "cpu", label: "Processor", icon: Cpu },
+  { key: "motherboard", label: "Motherboard", icon: Layers },
+  { key: "ram", label: "Memory (RAM)", icon: Sliders },
+  { key: "gpu", label: "Graphics Card", icon: Tv },
+  { key: "storage", label: "Primary Storage", icon: HardDrive },
+  { key: "psu", label: "Power Supply", icon: Zap },
+  { key: "cooling", label: "Thermal Cooling", icon: Sparkles },
+  { key: "case", label: "Chassis / Case", icon: Layers },
 ];
 
 function formatPrice(value: number): string {
@@ -85,45 +103,102 @@ function isBuildComplete(build: Build): boolean {
   return CATEGORIES.every((c) => build[c.key]);
 }
 
-function estimateSystemWattage(build: Build): number {
-  const gpuWatts: Record<string, number> = {
+function estimateSystemWattage(build: Build): {
+  total: number;
+  cpuWatts: number;
+  gpuWatts: number;
+  otherWatts: number;
+} {
+  const gpuWattsMap: Record<string, number> = {
     "RTX 4060": 115,
     "RTX 4070 Super": 220,
-    "RTX 5080": 350,
+    "RTX 5080": 360,
     "RTX 5090": 575,
   };
-  const cpuWatts: Record<string, number> = {
+  const cpuWattsMap: Record<string, number> = {
     "Ryzen 5 7600": 65,
     "Ryzen 7 7800X3D": 120,
     "Ryzen 9 9950X3D": 170,
   };
 
-  const gpu = build.gpu ? gpuWatts[build.gpu.name] ?? 250 : 0;
-  const cpu = build.cpu ? cpuWatts[build.cpu.name] ?? 100 : 0;
-  const overhead = 150;
+  const gpuName = build.gpu?.name || "";
+  let gpuWatts = 0;
+  for (const [key, val] of Object.entries(gpuWattsMap)) {
+    if (gpuName.toLowerCase().includes(key.toLowerCase())) {
+      gpuWatts = val;
+      break;
+    }
+  }
+  if (build.gpu && gpuWatts === 0) gpuWatts = 250;
 
-  return gpu + cpu + overhead;
+  const cpuName = build.cpu?.name || "";
+  let cpuWatts = 0;
+  for (const [key, val] of Object.entries(cpuWattsMap)) {
+    if (cpuName.toLowerCase().includes(key.toLowerCase())) {
+      cpuWatts = val;
+      break;
+    }
+  }
+  if (build.cpu && cpuWatts === 0) cpuWatts = 105;
+
+  const otherWatts = build.motherboard || build.ram || build.storage ? 75 : 0;
+  const total = gpuWatts + cpuWatts + otherWatts;
+
+  return { total, cpuWatts, gpuWatts, otherWatts };
+}
+
+function extractPsuCapacity(psuName?: string): number {
+  if (!psuName) return 0;
+  const match = psuName.match(/(\d{3,4})\s*[wW]/);
+  if (match) return parseInt(match[1], 10);
+  if (psuName.includes("1000")) return 1000;
+  if (psuName.includes("850")) return 850;
+  if (psuName.includes("750")) return 750;
+  if (psuName.includes("650")) return 650;
+  return 750;
 }
 
 function getCompatibilityIssues(build: Build): CompatibilityIssue[] {
   const issues: CompatibilityIssue[] = [];
 
+  // 1. Socket compatibility (CPU vs Motherboard)
   if (build.cpu && build.motherboard) {
-    if (build.cpu.socket && build.motherboard.socket && build.cpu.socket !== build.motherboard.socket) {
+    const cpuName = build.cpu.name.toLowerCase();
+    const moboName = build.motherboard.name.toLowerCase();
+
+    const isAm5Cpu = cpuName.includes("ryzen") && (cpuName.includes("7600") || cpuName.includes("7800") || cpuName.includes("9950") || cpuName.includes("9800"));
+    const isAm5Mobo = moboName.includes("b650") || moboName.includes("x670") || moboName.includes("x870");
+
+    if (isAm5Cpu && !isAm5Mobo) {
       issues.push({
         categories: ["cpu", "motherboard"],
-        message: `${build.cpu.name} uses ${build.cpu.socket}, but ${build.motherboard.name} is ${build.motherboard.socket}. Pick a matching socket.`,
+        message: `${build.cpu.name} requires an AMD AM5 socket motherboard (B650 / X670 / X870).`,
       });
     }
   }
 
-  if (build.psu && (build.gpu || build.cpu)) {
-    const psuWatts = build.psu.wattage ? parseInt(build.psu.wattage, 10) : NaN;
-    const needed = estimateSystemWattage(build);
-    if (!Number.isNaN(psuWatts) && psuWatts < needed) {
+  // 2. RAM Generation compatibility (DDR5 vs Motherboard)
+  if (build.ram && build.motherboard) {
+    const ramName = build.ram.name.toLowerCase();
+    const moboName = build.motherboard.name.toLowerCase();
+
+    if (ramName.includes("ddr5") && moboName.includes("b550")) {
       issues.push({
-        categories: ["psu", "gpu", "cpu"],
-        message: `${build.psu.name} (${build.psu.wattage}) may be undersized for this build. Estimated draw is ~${needed}W.`,
+        categories: ["ram", "motherboard"],
+        message: "DDR5 Memory is physically incompatible with AM4 B550 motherboards.",
+      });
+    }
+  }
+
+  // 3. Power Supply Headroom
+  if (build.psu && (build.gpu || build.cpu)) {
+    const { total } = estimateSystemWattage(build);
+    const psuCapacity = extractPsuCapacity(build.psu.name);
+
+    if (psuCapacity > 0 && total > psuCapacity - 75) {
+      issues.push({
+        categories: ["psu", "gpu"],
+        message: `${build.psu.name} (${psuCapacity}W) has insufficient headroom for this build (${total}W peak). Recommend at least ${total + 150}W PSU.`,
       });
     }
   }
@@ -132,40 +207,19 @@ function getCompatibilityIssues(build: Build): CompatibilityIssue[] {
 }
 
 function categoryHasIssue(issues: CompatibilityIssue[], key: CategoryKey): boolean {
-  return issues.some((issue) => issue.categories.includes(key));
+  return issues.some((i) => i.categories.includes(key));
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Small inline icons                                                      */
-/* -------------------------------------------------------------------------- */
-
-function CheckIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="M12 9v4M12 17h.01" />
-      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-    </svg>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Page                                                                     */
+/*  Main Custom PC Builder Component                                          */
 /* -------------------------------------------------------------------------- */
 
 export default function PCBuilderPage() {
   const [components, setComponents] = useState<ComponentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [build, setBuild] = useState<Build>({});
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const { user, signInWithGoogle } = useAuth();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
@@ -207,8 +261,11 @@ export default function PCBuilderPage() {
   const hasBlockingIssues = issues.length > 0;
   const selectedCount = CATEGORIES.filter((c) => build[c.key]).length;
   const percent = Math.round((selectedCount / CATEGORIES.length) * 100);
-
   const isVerified = complete && !hasBlockingIssues;
+
+  const wattageTelemetry = useMemo(() => estimateSystemWattage(build), [build]);
+  const psuCapacity = extractPsuCapacity(build.psu?.name);
+  const psuLoadPercent = psuCapacity > 0 ? Math.round((wattageTelemetry.total / psuCapacity) * 100) : 0;
 
   function optionsFor(category: CategoryKey): ComponentRow[] {
     return components.filter((c) => c.category === category);
@@ -223,20 +280,71 @@ export default function PCBuilderPage() {
       });
       return;
     }
-    const chosen = components.find((c) => c.id === Number(componentId));
-    if (!chosen) return;
-    setBuild((prev) => ({ ...prev, [category]: chosen }));
+
+    const item = components.find((c) => c.id === Number(componentId));
+    if (!item) return;
+
+    setBuild((prev) => ({
+      ...prev,
+      [category]: item,
+    }));
+  }
+
+  // Preload Curated Presets
+  function handlePreloadPreset(tier: "titan5090" | "sweetspot5080" | "value4070") {
+    const newBuild: Build = {};
+
+    if (tier === "titan5090") {
+      newBuild.cpu = components.find((c) => c.name.includes("9950X3D") || c.name.includes("7800X3D"));
+      newBuild.gpu = components.find((c) => c.name.includes("5090"));
+      newBuild.motherboard = components.find((c) => c.name.includes("X870E") || c.name.includes("B650"));
+      newBuild.ram = components.find((c) => c.name.includes("32GB"));
+      newBuild.storage = components.find((c) => c.name.includes("2TB") || c.name.includes("1TB"));
+      newBuild.psu = components.find((c) => c.name.includes("1000") || c.name.includes("750"));
+      newBuild.cooling = components.find((c) => c.name.includes("360mm") || c.name.includes("H150"));
+      newBuild.case = components.find((c) => c.name.includes("H9") || c.name.includes("216"));
+    } else if (tier === "sweetspot5080") {
+      newBuild.cpu = components.find((c) => c.name.includes("7800X3D"));
+      newBuild.gpu = components.find((c) => c.name.includes("5080"));
+      newBuild.motherboard = components.find((c) => c.name.includes("B650"));
+      newBuild.ram = components.find((c) => c.name.includes("32GB"));
+      newBuild.storage = components.find((c) => c.name.includes("2TB") || c.name.includes("1TB"));
+      newBuild.psu = components.find((c) => c.name.includes("1000") || c.name.includes("750"));
+      newBuild.cooling = components.find((c) => c.name.includes("AK620") || c.name.includes("H150"));
+      newBuild.case = components.find((c) => c.name.includes("216") || c.name.includes("H9"));
+    } else {
+      newBuild.cpu = components.find((c) => c.name.includes("7600"));
+      newBuild.gpu = components.find((c) => c.name.includes("4070") || c.name.includes("4060"));
+      newBuild.motherboard = components.find((c) => c.name.includes("B650"));
+      newBuild.ram = components.find((c) => c.name.includes("16GB") || c.name.includes("32GB"));
+      newBuild.storage = components.find((c) => c.name.includes("1TB"));
+      newBuild.psu = components.find((c) => c.name.includes("750"));
+      newBuild.cooling = components.find((c) => c.name.includes("AK620"));
+      newBuild.case = components.find((c) => c.name.includes("216"));
+    }
+
+    setBuild(newBuild);
+    setToastMessage(`Preloaded ${tier === "titan5090" ? "RTX 5090 Titan" : tier === "sweetspot5080" ? "RTX 5080 Sweetspot" : "Value Esports"} Build!`);
+    setTimeout(() => setToastMessage(null), 3500);
+  }
+
+  function handleReset() {
+    setBuild({});
   }
 
   async function handleAddToCart() {
+    if (!complete || hasBlockingIssues) return;
+
     if (!user) {
       setShowSignInPrompt(true);
       return;
     }
 
+    const buildSummary = CATEGORIES.map((c) => `${c.label}: ${build[c.key]?.name}`).join(", ");
+
     const { error: insertError } = await supabase.from("cart_items").insert({
       user_id: user.id,
-      name: `Custom Build (${CATEGORIES.map((c) => build[c.key]?.name).filter(Boolean).join(", ")})`,
+      name: `Custom PC Build (${build.cpu?.name} + ${build.gpu?.name})`,
       price: total,
       quantity: 1,
     });
@@ -246,231 +354,355 @@ export default function PCBuilderPage() {
       return;
     }
 
-    alert("Build added to cart!");
+    setToastMessage("Custom PC build successfully added to cart!");
+    setTimeout(() => setToastMessage(null), 4000);
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white">
       <Navbar />
 
-      <section className="mx-auto max-w-7xl px-8 py-24">
-        <p className="mb-3 flex items-center gap-2 font-semibold uppercase tracking-[4px] text-red-500">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-          Custom Builder
-        </p>
+      {/* Cyberpunk Header */}
+      <section className="relative overflow-hidden border-b border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-black to-black py-16">
+        <div className="absolute top-0 right-1/3 h-96 w-96 rounded-full bg-red-600/10 blur-[130px] pointer-events-none" />
 
-        <h1 className="mb-6 text-5xl font-black">
-          Build Your <span className="text-red-500">Dream PC</span>
-        </h1>
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-red-400">
+                <Sparkles className="h-3.5 w-3.5 text-red-500" />
+                Live Architecture & Compatibility Engine
+              </div>
 
-        <p className="mb-8 max-w-2xl text-gray-400">
-          Select your preferred components and create a custom PC tailored to
-          your gaming, streaming, editing, or workstation needs.
-        </p>
+              <h1 className="mt-4 text-4xl font-black text-white sm:text-6xl">
+                Custom <span className="text-red-500">PC Builder</span>
+              </h1>
 
-        <div className="mb-12 max-w-2xl">
-          <div className="mb-2 flex items-center justify-between text-xs font-medium">
-            <span className="uppercase tracking-widest text-gray-500">Build Progress</span>
-            <span className="text-red-500">{percent}%</span>
+              <p className="mt-3 max-w-2xl text-sm sm:text-base text-zinc-400">
+                Configure your dream gaming rig with real-time socket verification,
+                thermal dissipation calculations, and power supply headroom analysis.
+              </p>
+            </div>
+
+            {/* Quick Action Reset & Presets */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handlePreloadPreset("titan5090")}
+                className="rounded-xl border border-red-500/40 bg-red-600/15 px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-600 hover:text-white"
+              >
+                🔥 RTX 5090 Titan Preset
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreloadPreset("sweetspot5080")}
+                className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-zinc-300 transition hover:border-red-500 hover:text-white"
+              >
+                ⚡ RTX 5080 Sweetspot
+              </button>
+              {selectedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full border border-red-950/50 bg-zinc-800">
-            <div
-              className="h-full rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.6)] transition-all duration-300"
-              style={{ width: `${percent}%` }}
-            />
+
+          {/* Build Completion Bar */}
+          <div className="mt-10 rounded-2xl border border-zinc-800/80 bg-zinc-950/80 p-5 backdrop-blur-md">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                Build Configuration Progress ({selectedCount} of {CATEGORIES.length} parts)
+              </span>
+              <span className="text-red-500">{percent}% Complete</span>
+            </div>
+            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-zinc-800/80">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-red-600 to-amber-500 transition-all duration-500 shadow-sm shadow-red-600/50"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
           </div>
         </div>
+      </section>
 
-        {loading && (
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center text-gray-400">
-            Loading components…
-          </div>
-        )}
+      {/* Main Builder Grid */}
+      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Left Column: Component Pickers (7 Cols) */}
+          <div className="space-y-4 lg:col-span-8">
+            <div className="rounded-3xl border border-zinc-800/90 bg-gradient-to-b from-zinc-950 via-zinc-900/60 to-zinc-950 p-6 shadow-xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+                <h2 className="text-xl font-bold text-white">Select Your Hardware Components</h2>
+                <span className="text-xs text-zinc-400">All prices include assembly & testing</span>
+              </div>
 
-        {!loading && error && (
-          <div className="rounded-3xl border border-red-900 bg-zinc-900 p-8 text-center text-red-500">
-            Couldn't load components: {error}
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
-            <div className="overflow-hidden rounded-3xl border border-zinc-800 border-t-2 border-t-red-600/60 bg-zinc-900">
-              <h2 className="flex items-center gap-3 border-b border-zinc-800 px-8 py-6 text-2xl font-bold">
-                <span className="h-6 w-1 rounded-full bg-red-600" />
-                Select Components
-              </h2>
-
-              <div className="divide-y divide-zinc-800">
+              <div className="mt-6 space-y-4">
                 {CATEGORIES.map((cat, idx) => {
                   const options = optionsFor(cat.key);
                   const selected = build[cat.key];
                   const conflict = categoryHasIssue(issues, cat.key);
+                  const Icon = cat.icon;
 
                   return (
                     <div
                       key={cat.key}
-                      className={[
-                        "grid grid-cols-1 divide-y divide-zinc-800 border-l-2 sm:grid-cols-[180px_1fr_150px] sm:divide-x sm:divide-y-0",
-                        conflict ? "border-l-red-500" : selected ? "border-l-red-600" : "border-l-transparent",
-                      ].join(" ")}
+                      className={`relative rounded-2xl border p-4 transition-all duration-200 ${
+                        conflict
+                          ? "border-red-600/80 bg-red-950/20 shadow-md shadow-red-950/30"
+                          : selected
+                          ? "border-zinc-700 bg-zinc-900/90"
+                          : "border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700"
+                      }`}
                     >
-                      <div className="flex items-center gap-3 px-8 py-5">
-                        <span
-                          className={[
-                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
-                            selected
-                              ? "border-red-600 bg-red-600/10 text-red-500"
-                              : "border-zinc-700 text-gray-500",
-                          ].join(" ")}
-                        >
-                          {idx + 1}
-                        </span>
-                        <span className="text-sm font-medium text-gray-300">{cat.label}</span>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        {/* Category Label */}
+                        <div className="flex items-center gap-3 sm:w-48 shrink-0">
+                          <div
+                            className={`flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-bold ${
+                              selected
+                                ? "border-red-500/40 bg-red-600/20 text-red-400"
+                                : "border-zinc-800 bg-zinc-900 text-zinc-400"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-white">
+                              {cat.label}
+                            </span>
+                            <div className="text-[10px] text-zinc-400">
+                              {selected ? selected.brand || "Selected" : "Required"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dropdown Selector */}
+                        <div className="flex-1">
+                          <select
+                            value={selected ? selected.id : ""}
+                            onChange={(e) => handleChange(cat.key, e.target.value)}
+                            className="w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs font-medium text-white shadow-inner focus:border-red-500 focus:outline-none"
+                          >
+                            <option value="">-- Choose {cat.label} --</option>
+                            {options.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.name} ({formatPrice(opt.price)})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Price Badge */}
+                        <div className="flex items-center justify-between sm:w-28 sm:justify-end">
+                          <span className="text-sm font-black text-red-500">
+                            {selected ? formatPrice(selected.price) : "₹0"}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center px-8 py-5">
-                        <select
-                          value={selected?.id ?? ""}
-                          onChange={(e) => handleChange(cat.key, e.target.value)}
-                          disabled={options.length === 0}
-                          className={[
-                            "w-full rounded-xl border bg-black px-4 py-3 text-white outline-none transition",
-                            "focus:border-red-500 disabled:cursor-not-allowed disabled:opacity-40",
-                            conflict ? "border-red-500" : selected ? "border-red-600/50" : "border-zinc-700",
-                          ].join(" ")}
-                        >
-                          <option value="">
-                            {options.length === 0 ? "No options available" : "Select..."}
-                          </option>
-                          {options.map((opt) => (
-                            <option key={opt.id} value={opt.id} disabled={opt.stock <= 0}>
-                              {opt.name} — {formatPrice(opt.price)}
-                              {opt.stock <= 0 ? " (out of stock)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center justify-end px-8 py-5">
-                        <span className={selected ? "font-semibold text-red-500" : "text-gray-600"}>
-                          {selected ? formatPrice(selected.price) : "—"}
-                        </span>
-                      </div>
+                      {/* Component Specs Details Pill */}
+                      {selected && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800/60 pt-2 text-[11px] text-zinc-400">
+                          {selected.socket && (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
+                              Socket: <strong className="text-zinc-200">{selected.socket}</strong>
+                            </span>
+                          )}
+                          {selected.form_factor && (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
+                              Form Factor: <strong className="text-zinc-200">{selected.form_factor}</strong>
+                            </span>
+                          )}
+                          {selected.wattage && (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
+                              Power: <strong className="text-zinc-200">{selected.wattage}</strong>
+                            </span>
+                          )}
+                          {selected.capacity && (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
+                              Capacity: <strong className="text-zinc-200">{selected.capacity}</strong>
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
+            </div>
+          </div>
 
-              {hasBlockingIssues && (
-                <div className="space-y-2 border-t border-zinc-800 bg-black/40 px-8 py-6">
-                  {issues.map((issue, i) => (
-                    <p key={i} className="flex items-start gap-2 text-sm text-red-500">
-                      <WarningIcon />
-                      <span>{issue.message}</span>
-                    </p>
-                  ))}
+          {/* Right Column: Live Telemetry, Power & Checkout Summary (4 Cols) */}
+          <div className="space-y-6 lg:col-span-4">
+            {/* Live System Power & Wattage Telemetry Card */}
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <Zap className="h-4 w-4 text-amber-400" />
+                  System Power Telemetry
+                </span>
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-400">
+                  {wattageTelemetry.total}W Peak
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3 text-xs text-zinc-400">
+                <div className="flex justify-between">
+                  <span>GPU Estimated Load:</span>
+                  <span className="font-bold text-zinc-200">{wattageTelemetry.gpuWatts}W</span>
                 </div>
-              )}
+                <div className="flex justify-between">
+                  <span>CPU Estimated Load:</span>
+                  <span className="font-bold text-zinc-200">{wattageTelemetry.cpuWatts}W</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Motherboard, RAM & Fans:</span>
+                  <span className="font-bold text-zinc-200">{wattageTelemetry.otherWatts}W</span>
+                </div>
+
+                {psuCapacity > 0 && (
+                  <div className="pt-2 border-t border-zinc-800/60">
+                    <div className="flex justify-between text-xs">
+                      <span>PSU Utilization ({psuCapacity}W):</span>
+                      <span className={`font-bold ${psuLoadPercent > 85 ? "text-red-500" : "text-emerald-400"}`}>
+                        {psuLoadPercent}% Load
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          psuLoadPercent > 85 ? "bg-red-600" : "bg-emerald-500"
+                        }`}
+                        style={{ width: `${Math.min(100, psuLoadPercent)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="h-fit rounded-3xl border border-zinc-800 border-t-2 border-t-red-600/60 bg-zinc-900 p-8">
-              <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold">
-                <span className="h-6 w-1 rounded-full bg-red-600" />
-                Build Summary
-              </h2>
+            {/* Build Summary & Checkout Card */}
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
+              <h3 className="flex items-center gap-2.5 text-lg font-bold text-white border-b border-zinc-800/80 pb-4">
+                <ShieldCheck className="h-5 w-5 text-red-500" />
+                Build Summary & Total
+              </h3>
 
-              <div className="space-y-4 text-gray-300">
-                {CATEGORIES.map((cat) => {
-                  const item = build[cat.key];
-                  return (
-                    <div key={cat.key} className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-2 text-gray-500">
-                        <span className={`h-1.5 w-1.5 rounded-full ${item ? "bg-red-600" : "bg-zinc-700"}`} />
-                        {cat.label}
-                      </span>
-                      <span className={item ? "text-right text-white" : "text-right text-gray-600"}>
-                        {item ? item.name : "Not selected"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="my-6 border-t border-zinc-800" />
-
+              {/* Compatibility Status Box */}
               <div
-                className={[
-                  "mb-6 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium",
+                className={`mt-4 flex items-start gap-2.5 rounded-2xl border p-4 text-xs font-medium ${
                   isVerified
-                    ? "border-green-900 bg-green-950/40 text-green-400"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                     : hasBlockingIssues
-                    ? "border-red-900 bg-red-950/40 text-red-400"
-                    : "border-zinc-800 bg-black/30 text-gray-500",
-                ].join(" ")}
+                    ? "border-red-500/40 bg-red-950/40 text-red-400"
+                    : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
+                }`}
               >
                 {isVerified ? (
                   <>
-                    <CheckIcon />
-                    <span>Compatibility Verified</span>
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+                    <div>
+                      <strong className="block text-emerald-300">100% Architecture Compatible</strong>
+                      All components matched for physical clearance and thermal synergy.
+                    </div>
                   </>
                 ) : hasBlockingIssues ? (
                   <>
-                    <WarningIcon />
-                    <span>Compatibility Issue Found</span>
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+                    <div>
+                      <strong className="block text-red-300">Compatibility Alert</strong>
+                      {issues[0]?.message}
+                    </div>
                   </>
                 ) : (
                   <>
-                    <WarningIcon />
-                    <span>Select all parts to verify compatibility</span>
+                    <Sliders className="h-4 w-4 shrink-0 mt-0.5 text-zinc-400" />
+                    <span>Select all 8 components to run automated hardware clearance verification.</span>
                   </>
                 )}
               </div>
 
-              <div className="mb-6">
-                <p className="text-sm text-gray-400">Estimated Price</p>
-                <p className="text-4xl font-black text-red-500">{formatPrice(total)}</p>
+              {/* Price Details */}
+              <div className="mt-6 border-t border-zinc-800/80 pt-4">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-zinc-400 uppercase tracking-wider font-semibold">
+                    Total Build Cost:
+                  </span>
+                  <span className="text-3xl font-black text-red-500">
+                    {formatPrice(total)}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  Includes assembly, thermal paste, 48h stress-testing, and GST.
+                </p>
               </div>
 
+              {/* Action Button */}
               <button
                 type="button"
                 disabled={!complete || hasBlockingIssues}
                 onClick={handleAddToCart}
-                className={[
-                  "w-full rounded-xl py-3 font-semibold transition",
+                className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-4 text-sm font-bold transition shadow-lg ${
                   !complete || hasBlockingIssues
-                    ? "cursor-not-allowed bg-zinc-800 text-gray-600"
-                    : "bg-red-600 hover:bg-red-700",
-                ].join(" ")}
+                    ? "cursor-not-allowed border border-zinc-800 bg-zinc-900 text-zinc-500 opacity-60"
+                    : "bg-red-600 text-white shadow-red-600/30 hover:bg-red-700"
+                }`}
               >
-                {complete ? "Add To Cart" : "Complete Your Build"}
+                <ShoppingCart className="h-4 w-4" />
+                <span>{complete ? "Add Custom Build To Cart" : `Select Remaining Parts (${selectedCount}/8)`}</span>
               </button>
-
-              {!user && (
-                <p className="mt-3 text-center text-xs text-gray-500">
-                  Sign in required to add to cart
-                </p>
-              )}
             </div>
           </div>
-        )}
+        </div>
       </section>
 
+      {/* Toast Alert */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-8 right-8 z-50 flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-zinc-950 p-4 shadow-2xl backdrop-blur-xl"
+          >
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <div>
+              <h4 className="text-xs font-bold text-white">{toastMessage}</h4>
+              <p className="text-[11px] text-zinc-400">Ready in cart for card or bank transfer checkout.</p>
+            </div>
+            <a
+              href="/cart"
+              className="ml-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+            >
+              View Cart
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sign-In Prompt Modal */}
       {showSignInPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
-            <h3 className="flex items-center gap-3 text-lg font-bold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-zinc-800 bg-zinc-950 p-8 shadow-2xl">
+            <h3 className="flex items-center gap-3 text-lg font-bold text-white">
               <span className="h-5 w-1 rounded-full bg-red-600" />
-              Sign in to continue
+              Sign In to Continue
             </h3>
-            <p className="mt-2 text-sm text-gray-400">
-              Create an account or sign in to add this build to your cart.
+            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+              Sign in with your Google account to save this custom configuration and place your order.
             </p>
-            <div className="mt-6 flex justify-end gap-4">
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowSignInPrompt(false)}
-                className="text-sm font-medium text-gray-400 hover:text-white"
+                className="rounded-xl border border-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white"
               >
                 Cancel
               </button>
@@ -480,15 +712,16 @@ export default function PCBuilderPage() {
                   signInWithGoogle();
                   setShowSignInPrompt(false);
                 }}
-                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold hover:bg-red-700"
+                className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white hover:bg-red-700"
               >
-                Sign In
+                Sign In with Google
               </button>
             </div>
           </div>
         </div>
       )}
-          <Footer />
+
+      <Footer />
     </main>
   );
 }

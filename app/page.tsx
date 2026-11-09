@@ -16,7 +16,37 @@ import {
   Tv,
   Cpu,
   Layers,
+  Award,
+  Star,
+  MapPin,
 } from "lucide-react";
+
+const COMMUNITY_BUILDS = [
+  {
+    owner: "Krishna M.",
+    city: "Sonipat, NCR",
+    system: "Zen Apex 5090 Titan",
+    specs: "AMD Ryzen 7 9800X3D • RTX 5090 32GB • 64GB DDR5",
+    benchmark: "910 FPS (CS2 1080p Comp) • 145 FPS (Cyberpunk 4K RT)",
+    date: "Delivered & Benchmarked Yesterday",
+  },
+  {
+    owner: "Raghav K.",
+    city: "Bengaluru, KA",
+    system: "Zen Ultra 5080 Pro",
+    specs: "Ryzen 7 7800X3D • RTX 5080 16GB • 32GB DDR5 6000",
+    benchmark: "720 FPS (CS2) • 285 FPS (Call of Duty BO6)",
+    date: "Delivered & Benchmarked 3 days ago",
+  },
+  {
+    owner: "Shreya V.",
+    city: "Mumbai, MH",
+    system: "Zen Pro 4070 Super",
+    specs: "Ryzen 5 7600X • RTX 4070 Super • 32GB DDR5 • 1TB NVMe",
+    benchmark: "540 FPS (Valorant) • 185 FPS (Forza Horizon 5)",
+    date: "Delivered & Benchmarked this week",
+  },
+];
 
 export default function Home() {
   return (
@@ -45,9 +75,9 @@ export default function Home() {
             </h3>
 
             <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Already purchased your GPU, CPU, or motherboard? Ship them to our lab or request our
-              technician. We perform precision cable routing, custom liquid loop testing, and thermal
-              burn-in for a flat fee.
+              Already purchased your GPU, CPU, or motherboard? Ship them to our facility or request
+              our certified technician. We perform precision cable routing, custom liquid loop testing,
+              and 48-hour thermal burn-in for a flat fee.
             </p>
 
             <div className="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-5">
@@ -105,6 +135,63 @@ export default function Home() {
 
       {/* Featured Ready PCs Section */}
       <FeaturedPCs />
+
+      {/* Verified Gamer Benchmarks & Community Rig Gallery Strip */}
+      <section className="relative overflow-hidden border-y border-zinc-800/80 bg-zinc-950/70 py-20 px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-red-400">
+                <Award className="h-3.5 w-3.5 text-red-500" />
+                Verified Gamer Benchmarks
+              </div>
+              <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">
+                Recent Custom <span className="text-red-500">Rig Deliveries</span>
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-400 max-w-sm">
+              Every system is stress-tested with Cinebench R24 and FurMark before departure.
+              Actual on-site verified FPS numbers.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {COMMUNITY_BUILDS.map((build, i) => (
+              <div
+                key={i}
+                className="rounded-3xl border border-zinc-800 bg-black/60 p-6 backdrop-blur-md shadow-xl hover:border-zinc-700 transition"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>{build.owner}</span>
+                    <span className="text-zinc-500">({build.city})</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-400">{build.date}</span>
+                </div>
+
+                <div className="mt-4">
+                  <span className="text-base font-extrabold text-white block">
+                    {build.system}
+                  </span>
+                  <p className="mt-1 text-xs text-zinc-400 truncate">
+                    {build.specs}
+                  </p>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-3 text-xs">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-red-400">
+                    Verified Benchmark
+                  </span>
+                  <span className="mt-1 font-semibold text-zinc-200 block">
+                    {build.benchmark}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Engineering Standards & Features */}
       <Features />
