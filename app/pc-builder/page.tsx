@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
 
 const supabase = createClient();
@@ -487,6 +488,7 @@ export default function PCBuilderPage() {
           </div>
         </div>
       )}
+          <Footer />
     </main>
   );
 }

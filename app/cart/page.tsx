@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
@@ -151,6 +152,7 @@ export default function CartPage() {
           </div>
         )}
       </section>
+          <Footer />
     </main>
   );
 }

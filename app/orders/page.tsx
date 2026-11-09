@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
@@ -167,6 +168,7 @@ export default function OrdersPage() {
           </div>
         )}
       </section>
+          <Footer />
     </main>
   );
 }

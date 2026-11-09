@@ -2,6 +2,7 @@
 "use client";
 
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -398,6 +399,7 @@ export default function BringYourOwnPartsPage() {
           </div>
         </div>
       )}
+          <Footer />
     </div>
   );
 }

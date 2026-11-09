@@ -127,7 +127,7 @@ function OrderConfirmationContent() {
               ) : (
                 <>
                   Our technician will contact you soon to schedule a visit, deliver and assemble your PC. You can pay
-                  them directly at that time — either in cash or online (UPI).
+                  them directly at that time — either via Card POS terminal, direct bank transfer, or cash.
                 </>
               )}
             </p>

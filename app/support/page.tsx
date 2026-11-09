@@ -33,6 +33,7 @@
 
 import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { supabase } from "../../lib/supabase";
 
 
@@ -60,7 +61,7 @@ const FAQS = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We accept secure online payments via Razorpay (UPI, Credit/Debit cards, Net Banking) as well as Cash on Delivery (COD), where you can pay our technician directly via Cash or online (UPI) during delivery and setup.",
+      "We accept secure online payments via Razorpay (Credit Cards - Visa, MasterCard, RuPay; Debit Cards; and Direct Bank Transfer / Net Banking across 50+ banks) as well as White-Glove Doorstep Delivery, where you can pay our technician directly via Card POS terminal, direct bank transfer, or cash upon delivery and setup.",
   },
   {
     question: "Can I track my order status?",
@@ -365,7 +366,8 @@ export default function SupportPage() {
             </div>
           )}
         </section>
-      </main>
+            <Footer />
+    </main>
     </div>
   );
 }

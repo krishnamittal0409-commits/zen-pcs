@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
@@ -44,6 +45,7 @@ interface RazorpayOptions {
   modal?: {
     ondismiss?: () => void;
   };
+  config?: any;
 }
 
 declare global {
@@ -221,6 +223,23 @@ export default function CheckoutPage() {
         },
         theme: {
           color: "#d6001c",
+        },
+        config: {
+          display: {
+            blocks: {
+              card_and_banks: {
+                name: "Pay via Cards or Net Banking",
+                instruments: [
+                  { method: "card" },
+                  { method: "netbanking" },
+                ],
+              },
+            },
+            sequence: ["block.card_and_banks"],
+            preferences: {
+              show_default_blocks: false,
+            },
+          },
         },
         modal: {
           ondismiss: () => {
@@ -430,21 +449,21 @@ export default function CheckoutPage() {
             </div>
 
             {/* Payment Method Selection */}
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
               <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold">
                 <span className="h-6 w-1 rounded-full bg-red-600" />
                 Payment Method
               </h2>
               <p className="mb-6 text-sm text-gray-400">
-                Choose to pay online securely or pay on delivery when our technician sets up your PC.
+                Choose online payment via Credit/Debit Card or Net Banking, or opt for White-Glove Doorstep Setup.
               </p>
 
               <div className="space-y-4">
-                {/* Option 1: Razorpay Online Payment */}
+                {/* Option 1: Razorpay Card & Bank Transfer Payment */}
                 <label
                   className={`flex cursor-pointer flex-col rounded-2xl border p-5 transition ${
                     paymentMethod === "online"
-                      ? "border-red-600 bg-black/60 shadow-[0_0_15px_rgba(220,38,38,0.15)]"
+                      ? "border-red-600 bg-black/60 shadow-[0_0_20px_rgba(220,38,38,0.2)]"
                       : "border-zinc-800 bg-black/20 hover:border-zinc-700"
                   }`}
                 >
@@ -459,19 +478,28 @@ export default function CheckoutPage() {
                         className="h-4 w-4 accent-red-600"
                       />
                       <span className="text-base font-bold text-white">
-                        Pay Online (Razorpay)
+                        Credit Card / Debit Card / Net Banking (Razorpay)
                       </span>
                     </div>
                     <span className="rounded-full border border-amber-600/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
-                      Test API Active
+                      Card & Bank Transfer Test Mode
                     </span>
                   </div>
+
                   <p className="mt-2 pl-7 text-sm text-gray-400">
-                    Pay securely using UPI (Google Pay, PhonePe, Paytm), Credit / Debit Card, or Net Banking via Razorpay Test mode.
+                    Pay securely using <strong>Credit Cards</strong> (Visa, MasterCard, RuPay), <strong>Debit Cards</strong>, or <strong>Direct Bank Transfer / Net Banking</strong> (SBI, HDFC, ICICI, Axis & 50+ banks) via Razorpay.
                   </p>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 pl-7 text-xs text-zinc-300">
+                    <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-medium">💳 Visa</span>
+                    <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-medium">💳 MasterCard</span>
+                    <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-medium">💳 RuPay Debit/Credit</span>
+                    <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-medium">🏦 Direct Bank Transfer</span>
+                  </div>
+
                   {total > 500000 && paymentMethod === "online" && (
-                    <p className="mt-2 pl-7 text-xs text-amber-400/90">
-                      ℹ️ Note: Indian payment gateways have a single-transaction limit of ₹5,00,000. In this test API mode, test checkout will authorize up to ₹5,00,000 and confirm your full build of {formatPrice(total)}.
+                    <p className="mt-3 pl-7 text-xs text-amber-400/90">
+                      ℹ️ Gateway Note: In Razorpay Test API mode, test checkout authorizes simulated card/netbanking payments up to ₹5,00,000 to verify order execution of {formatPrice(total)}.
                     </p>
                   )}
                 </label>
@@ -480,7 +508,7 @@ export default function CheckoutPage() {
                 <label
                   className={`flex cursor-pointer flex-col rounded-2xl border p-5 transition ${
                     paymentMethod === "cod"
-                      ? "border-red-600 bg-black/60 shadow-[0_0_15px_rgba(220,38,38,0.15)]"
+                      ? "border-red-600 bg-black/60 shadow-[0_0_20px_rgba(220,38,38,0.2)]"
                       : "border-zinc-800 bg-black/20 hover:border-zinc-700"
                   }`}
                 >
@@ -495,15 +523,15 @@ export default function CheckoutPage() {
                         className="h-4 w-4 accent-red-600"
                       />
                       <span className="text-base font-bold text-white">
-                        Cash on Delivery (Pay on Installation)
+                        Doorstep Technician Setup & Pay on Delivery
                       </span>
                     </div>
                     <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-xs font-semibold text-gray-300">
-                      Pay on Delivery
+                      White-Glove Service
                     </span>
                   </div>
                   <p className="mt-2 pl-7 text-sm text-gray-400">
-                    No payment is needed right now. Our technician will assemble and set up your PC at your doorstep — you can pay them directly via Cash or online (UPI).
+                    No payment is required right now. Our certified technician will deliver, assemble, and bench-test your PC at your doorstep — you can pay them directly via Card POS terminal, direct bank transfer, or cash.
                   </p>
                 </label>
               </div>
@@ -527,6 +555,7 @@ export default function CheckoutPage() {
           </div>
         )}
       </section>
+          <Footer />
     </main>
   );
 }
