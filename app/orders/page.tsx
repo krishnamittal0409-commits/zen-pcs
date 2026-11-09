@@ -60,6 +60,90 @@ const BUILD_STAGES = [
   { key: "completed", label: "Completed", desc: "Setup & Benchmarked", icon: ShieldCheck },
 ];
 
+interface StageProgress {
+  currentStageIndex: number; // 0 to 4, or -1 for cancelled
+  isCancelled: boolean;
+  isFullyCompleted: boolean;
+  statusLabel: string;
+}
+
+function getOrderStageProgress(status: string = ""): StageProgress {
+  const s = status.toLowerCase();
+
+  if (s.includes("cancel")) {
+    return {
+      currentStageIndex: -1,
+      isCancelled: true,
+      isFullyCompleted: false,
+      statusLabel: "Order Cancelled",
+    };
+  }
+
+  if (s.includes("complete") || s.includes("delivered")) {
+    return {
+      currentStageIndex: 4,
+      isCancelled: false,
+      isFullyCompleted: true,
+      statusLabel: "Completed & Verified",
+    };
+  }
+
+  if (s.includes("transit") || s.includes("shipped") || s.includes("dispatch")) {
+    return {
+      currentStageIndex: 3,
+      isCancelled: false,
+      isFullyCompleted: false,
+      statusLabel: "In Transit / White-Glove Van",
+    };
+  }
+
+  if (s.includes("stress") || s.includes("test") || s.includes("burn")) {
+    return {
+      currentStageIndex: 2,
+      isCancelled: false,
+      isFullyCompleted: false,
+      statusLabel: "48h Stress Testing",
+    };
+  }
+
+  if (s.includes("assembl") || s.includes("wiring") || s.includes("build")) {
+    return {
+      currentStageIndex: 1,
+      isCancelled: false,
+      isFullyCompleted: false,
+      statusLabel: "Cleanroom Assembly",
+    };
+  }
+
+  // Confirmed or Paid or default
+  return {
+    currentStageIndex: 0,
+    isCancelled: false,
+    isFullyCompleted: false,
+    statusLabel: "Parts Allocated & Confirmed",
+  };
+}
+
+function getStatusBadgeStyle(status: string = ""): string {
+  const s = status.toLowerCase();
+  if (s.includes("cancel")) {
+    return "border-red-500/40 bg-red-950/40 text-red-400";
+  }
+  if (s.includes("complete") || s.includes("delivered")) {
+    return "border-emerald-500/40 bg-emerald-950/50 text-emerald-400 shadow-sm shadow-emerald-950/30";
+  }
+  if (s.includes("transit") || s.includes("shipped")) {
+    return "border-sky-500/40 bg-sky-950/40 text-sky-400";
+  }
+  if (s.includes("stress") || s.includes("test")) {
+    return "border-orange-500/40 bg-orange-950/40 text-orange-400";
+  }
+  if (s.includes("assembl")) {
+    return "border-amber-500/40 bg-amber-950/40 text-amber-400";
+  }
+  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+}
+
 export default function OrdersPage() {
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -224,65 +308,135 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 shadow-xl"
-              >
-                {/* Order Top Bar */}
-                <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-red-500">
-                      Order #{order.id}
-                    </span>
-                    <h3 className="mt-1 text-2xl font-black text-white">
-                      {formatPrice(order.total)}
-                    </h3>
-                    <span className="text-xs text-zinc-500">Placed on {formatDate(order.created_at)}</span>
+            {orders.map((order) => {
+              const { currentStageIndex, isCancelled, isFullyCompleted, statusLabel } =
+                getOrderStageProgress(order.status);
+
+              return (
+                <div
+                  key={order.id}
+                  className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 shadow-xl"
+                >
+                  {/* Order Top Bar */}
+                  <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-red-500">
+                          Order #{order.id}
+                        </span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-xs text-zinc-400 font-medium">{statusLabel}</span>
+                      </div>
+                      <h3 className="mt-1 text-2xl font-black text-white">
+                        {formatPrice(order.total)}
+                      </h3>
+                      <span className="text-xs text-zinc-500">Placed on {formatDate(order.created_at)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full border px-3.5 py-1 text-xs font-bold ${getStatusBadgeStyle(
+                          order.status
+                        )}`}
+                      >
+                        {order.status || "Active Order"}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-                      {order.status || "Active Order"}
-                    </span>
-                  </div>
-                </div>
+                  {/* Visual 5-Stage Build Pipeline Stepper */}
+                  <div className="py-8 border-b border-zinc-800/80">
+                    <div className="flex items-center justify-between mb-6">
+                      <span className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Boutique Assembly Pipeline
+                      </span>
+                      {isCancelled ? (
+                        <span className="text-xs font-semibold text-red-400">Build Halted • Order Cancelled</span>
+                      ) : isFullyCompleted ? (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> All 5 Stages Verified & Delivered
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400">
+                          Current Stage: <strong className="text-white">{BUILD_STAGES[currentStageIndex]?.label}</strong>
+                        </span>
+                      )}
+                    </div>
 
-                {/* Visual 5-Stage Build Pipeline Stepper */}
-                <div className="py-8 border-b border-zinc-800/80">
-                  <span className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-6">
-                    Boutique Assembly Pipeline
-                  </span>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+                      {BUILD_STAGES.map((stage, idx) => {
+                        const StageIcon = stage.icon;
 
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-                    {BUILD_STAGES.map((stage, idx) => {
-                      const StageIcon = stage.icon;
-                      const isComplete = idx <= 2; // Simulated stage for test order
-                      const isCurrent = idx === 2;
+                        let isComplete = false;
+                        let isCurrent = false;
 
-                      return (
-                        <div
-                          key={stage.key}
-                          className={`flex flex-col items-center rounded-2xl border p-3.5 text-center transition ${
-                            isCurrent
-                              ? "border-red-500 bg-red-600/15 shadow-md shadow-red-950/40"
-                              : isComplete
-                              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
-                              : "border-zinc-800/80 bg-zinc-900/40 opacity-50"
-                          }`}
-                        >
-                          <StageIcon
-                            className={`h-5 w-5 ${
-                              isCurrent ? "text-red-400 animate-pulse" : isComplete ? "text-emerald-400" : "text-zinc-600"
+                        if (isCancelled) {
+                          isComplete = false;
+                          isCurrent = false;
+                        } else if (isFullyCompleted) {
+                          isComplete = true;
+                          isCurrent = false;
+                        } else {
+                          isComplete = idx < currentStageIndex;
+                          isCurrent = idx === currentStageIndex;
+                        }
+
+                        const isFinalCompleted = isFullyCompleted && idx === 4;
+
+                        return (
+                          <div
+                            key={stage.key}
+                            className={`relative flex flex-col items-center rounded-2xl border p-3.5 text-center transition ${
+                              isCancelled
+                                ? "border-zinc-900 bg-zinc-950/40 opacity-40 text-zinc-600"
+                                : isFinalCompleted
+                                ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300 shadow-md shadow-emerald-950/30"
+                                : isCurrent
+                                ? "border-amber-500 bg-amber-500/15 text-amber-400 shadow-md shadow-amber-950/40"
+                                : isComplete
+                                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
+                                : "border-zinc-800/80 bg-zinc-900/40 opacity-40 text-zinc-600"
                             }`}
-                          />
-                          <span className="mt-2 text-xs font-bold text-white">{stage.label}</span>
-                          <span className="text-[10px] text-zinc-400">{stage.desc}</span>
-                        </div>
-                      );
-                    })}
+                          >
+                            <div className="relative mb-1">
+                              <StageIcon
+                                className={`h-5 w-5 ${
+                                  isCancelled
+                                    ? "text-zinc-600"
+                                    : isFinalCompleted
+                                    ? "text-emerald-400"
+                                    : isCurrent
+                                    ? "text-amber-400 animate-pulse"
+                                    : isComplete
+                                    ? "text-emerald-400"
+                                    : "text-zinc-600"
+                                }`}
+                              />
+                              {isComplete && (
+                                <span className="absolute -bottom-1 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-black shadow-sm">
+                                  ✓
+                                </span>
+                              )}
+                            </div>
+                            <span className="mt-1 text-xs font-bold text-white">{stage.label}</span>
+                            <span
+                              className={`text-[10px] ${
+                                isFinalCompleted
+                                  ? "text-emerald-400 font-semibold"
+                                  : isCurrent
+                                  ? "text-amber-300 font-medium"
+                                  : isComplete
+                                  ? "text-emerald-400/80"
+                                  : "text-zinc-500"
+                              }`}
+                            >
+                              {isFinalCompleted ? "Delivered & Verified" : stage.desc}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
                 {/* Items in this Order */}
                 <div className="pt-6">
@@ -315,7 +469,8 @@ export default function OrdersPage() {
                   </Link>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </section>

@@ -140,7 +140,17 @@ const EMPTY_READY_PC_FORM = {
   active: true,
 };
 
-const ORDER_STATUSES = ["Paid (Online - Razorpay)", "Pending (Cash on Delivery)", "Pending", "Confirmed", "Shipped", "Completed", "Cancelled"];
+const ORDER_STATUSES = [
+  "Paid (Online - Razorpay)",
+  "Pending (Cash on Delivery)",
+  "Pending",
+  "Confirmed",
+  "Assembly (Cleanroom Wiring)",
+  "Stress Test (48h Thermal Run)",
+  "Shipped",
+  "Completed",
+  "Cancelled",
+];
 const SUBMISSION_STATUSES = ["pending review", "approved", "rejected", "completed"];
 
 function formatPrice(value: number): string {
@@ -168,6 +178,10 @@ function orderStatusColor(status: string): string {
       return "border-yellow-900 bg-yellow-950/40 text-yellow-400";
     case "Confirmed":
       return "border-blue-900 bg-blue-950/40 text-blue-400";
+    case "Assembly (Cleanroom Wiring)":
+      return "border-amber-900 bg-amber-950/40 text-amber-400";
+    case "Stress Test (48h Thermal Run)":
+      return "border-orange-900 bg-orange-950/40 text-orange-400";
     case "Shipped":
       return "border-purple-900 bg-purple-950/40 text-purple-400";
     case "Completed":
