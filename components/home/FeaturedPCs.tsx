@@ -1,22 +1,10 @@
 // components/home/FeaturedPCs.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { motion } from "framer-motion";
-import {
-  Cpu,
-  Tv,
-  HardDrive,
-  Layers,
-  ArrowRight,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck,
-} from "lucide-react";
 
 const supabase = createClient();
 
@@ -29,63 +17,39 @@ interface ReadyPC {
   specs: string[];
 }
 
-// Fallback high-fidelity builds if Supabase is offline
-const FALLBACK_PCS: ReadyPC[] = [
+// Exactly matches your real Supabase `ready_pcs` table rows
+const DATABASE_FALLBACK_PCS: ReadyPC[] = [
   {
     id: 1,
-    name: "Zen Apex 5090 Titan",
-    price: 449999,
-    badge: "Flagship Beast",
-    image: "/images/pcs/zen-apex.png",
-    specs: [
-      "AMD Ryzen 7 9800X3D (Zen 5 3D V-Cache)",
-      "NVIDIA GeForce RTX 5090 32GB GDDR7",
-      "64GB DDR5 6000MHz CL30 EXPO",
-      "2TB Gen5 NVMe SSD (12,400 MB/s)",
-      "360mm ARGB AIO Liquid Cooler",
-    ],
+    name: "Zen Starter",
+    price: 74999,
+    badge: "Best Value",
+    image: "/images/pcs/zen-starter.png",
+    specs: ["Ryzen 5 7600", "RTX 4060", "16GB DDR5", "1TB Gen 4 NVMe SSD"],
   },
   {
     id: 2,
-    name: "Zen Ultra 5080 Pro",
-    price: 289999,
-    badge: "4K 240Hz Sweetspot",
-    image: "/images/pcs/zen-ultra.png",
-    specs: [
-      "AMD Ryzen 7 7800X3D Processor",
-      "NVIDIA GeForce RTX 5080 16GB GDDR7",
-      "32GB DDR5 6000MHz CL30 Memory",
-      "2TB PCIe 4.0 NVMe SSD",
-      "850W ATX 3.0 Gold Certified PSU",
-    ],
+    name: "Zen Pro",
+    price: 124999,
+    badge: "Best Seller",
+    image: "/images/pcs/zen-pro.png",
+    specs: ["Ryzen 7 7800X3D", "RTX 4070 Super", "32GB DDR5", "2TB Gen 4 NVMe SSD"],
   },
   {
     id: 3,
-    name: "Zen Pro 4070 Super",
-    price: 154999,
-    badge: "1440p Esports King",
-    image: "/images/pcs/zen-pro.png",
-    specs: [
-      "AMD Ryzen 5 7600X AM5 Processor",
-      "NVIDIA GeForce RTX 4070 Super 12GB",
-      "32GB DDR5 5600MHz High-Speed RAM",
-      "1TB Gen4 NVMe M.2 Solid State Drive",
-      "750W 80+ Gold Power Supply",
-    ],
+    name: "Zen Ultra",
+    price: 949999,
+    badge: "Flagship",
+    image: "/images/pcs/zen-ultra.png",
+    specs: ["Ryzen 9 9900X3D", "RTX 4090", "64GB DDR5 RAM", "4TB Gen 5 NVMe SSD"],
   },
   {
     id: 4,
-    name: "Zen Starter Esports Rig",
-    price: 89999,
-    badge: "Best Value 1080p",
-    image: "/images/pcs/zen-starter.png",
-    specs: [
-      "AMD Ryzen 5 5600X Processor",
-      "NVIDIA GeForce RTX 4060 8GB GDDR6",
-      "16GB Dual Channel 3600MHz RAM",
-      "1TB NVMe M.2 High-Speed SSD",
-      "Airflow Mesh ARGB Case with 4 Fans",
-    ],
+    name: "Zen Apex",
+    price: 1499999,
+    badge: "Apex",
+    image: "/images/pcs/zen-apex.png",
+    specs: ["Ryzen 9 9950X3D2", "Asus Astral RTX 5090", "128 GB DDR5 RAM", "4 TB NVMe Gen 5"],
   },
 ];
 
@@ -105,12 +69,8 @@ function normalizeImagePath(path: string | null): string {
 }
 
 export default function FeaturedPCs() {
-  const [pcs, setPcs] = useState<ReadyPC[]>(FALLBACK_PCS);
+  const [pcs, setPcs] = useState<ReadyPC[]>(DATABASE_FALLBACK_PCS);
   const [loading, setLoading] = useState(true);
-
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
     async function fetchPCs() {
@@ -119,13 +79,13 @@ export default function FeaturedPCs() {
           .from("ready_pcs")
           .select("id, name, price, badge, image, specs")
           .eq("active", true)
-          .order("price", { ascending: false });
+          .order("price", { ascending: true });
 
         if (!error && data && data.length > 0) {
           setPcs(data as ReadyPC[]);
         }
       } catch (err) {
-        console.warn("Using fallback ready systems:", err);
+        console.warn("Using database fallback builds:", err);
       } finally {
         setLoading(false);
       }
@@ -134,158 +94,80 @@ export default function FeaturedPCs() {
     fetchPCs();
   }, []);
 
-  function updateScrollButtons() {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
-  }
-
-  useEffect(() => {
-    updateScrollButtons();
-  }, [pcs]);
-
-  function scrollByCards(direction: "left" | "right") {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const cardWidth = el.querySelector("[data-card]")?.clientWidth ?? 380;
-    const gap = 32;
-    const amount = cardWidth + gap;
-
-    el.scrollBy({
-      left: direction === "left" ? -amount : amount,
-      behavior: "smooth",
-    });
-  }
-
   return (
-    <section className="relative overflow-hidden bg-black px-6 py-24 lg:px-8">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/4 h-96 w-96 -translate-y-1/2 rounded-full bg-red-600/10 blur-[130px] pointer-events-none" />
-
+    <section className="bg-black px-6 py-20 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        {/* Section Header */}
-        <div className="mb-14 flex flex-wrap items-end justify-between gap-6">
+        {/* Header */}
+        <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-red-400">
-              <Sparkles className="h-3 w-3 text-red-500" />
-              Pre-Configured & Stress-Tested
-            </div>
-
-            <h2 className="mt-3 text-3xl font-black text-white sm:text-5xl">
-              Ready-To-Ship <span className="text-red-500">Gaming Rigs</span>
-            </h2>
-
-            <p className="mt-2 text-sm sm:text-base text-zinc-400">
-              Fully assembled, benchmarked, and boxed with dual-cushioning for safe doorstep arrival.
+            <p className="mb-2 text-xs font-bold uppercase tracking-[4px] text-red-500">
+              Featured Systems
             </p>
+            <h2 className="text-3xl font-black text-white sm:text-4xl">
+              Ready-To-Ship Systems
+            </h2>
           </div>
-
-          {/* Scroller Controls */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/ready-pcs"
-              className="mr-3 hidden items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white sm:flex"
-            >
-              <span>View All Systems</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => scrollByCards("left")}
-              disabled={!canScrollLeft}
-              aria-label="Previous PCs"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-white transition hover:border-red-500 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollByCards("right")}
-              disabled={!canScrollRight}
-              aria-label="Next PCs"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-white transition hover:border-red-500 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+          <Link
+            href="/ready-pcs"
+            className="text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+          >
+            View All Systems →
+          </Link>
         </div>
 
-        {/* Horizontal Carousel */}
-        <div
-          ref={scrollerRef}
-          onScroll={updateScrollButtons}
-          className="flex snap-x snap-mandatory gap-8 overflow-x-auto pb-6 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
+        {/* Clean Responsive 4-Column Grid - Zero Overlapping */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {pcs.map((pc) => (
             <div
               key={pc.id}
-              data-card
-              className="group relative w-[320px] shrink-0 snap-start overflow-hidden rounded-3xl border border-zinc-800/90 bg-gradient-to-b from-zinc-900/90 via-zinc-950 to-black p-6 shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-red-500/80 hover:shadow-red-950/20 sm:w-[380px]"
+              className="flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 transition hover:border-zinc-700"
             >
-              {/* Badge Tag */}
-              {pc.badge && (
-                <div className="absolute top-5 right-5 z-20">
-                  <span className="rounded-full bg-red-600 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-md shadow-red-900/50">
-                    {pc.badge}
-                  </span>
+              <div>
+                {/* Image Showcase */}
+                <div className="relative mb-5 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-zinc-800/80 bg-black">
+                  {pc.badge && (
+                    <span className="absolute right-3 top-3 z-10 rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      {pc.badge}
+                    </span>
+                  )}
+                  <div className="relative h-44 w-44">
+                    <Image
+                      src={normalizeImagePath(pc.image)}
+                      alt={pc.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 260px"
+                      className="object-contain p-2"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {/* Hardware Preview Card */}
-              <div className="relative flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-zinc-800/60 bg-black/60">
-                {/* Internal Glow Circle */}
-                <div className="absolute h-48 w-48 rounded-full bg-red-600/15 blur-2xl transition-all group-hover:scale-125 group-hover:bg-red-600/25" />
-
-                <div className="relative h-60 w-60">
-                  <Image
-                    src={normalizeImagePath(pc.image)}
-                    alt={pc.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 380px"
-                    className="object-contain p-2 transition-transform duration-500 group-hover:scale-110 drop-shadow-xl"
-                  />
-                </div>
-              </div>
-
-              {/* Rig Title & Price */}
-              <div className="mt-6">
-                <h3 className="text-xl font-bold text-white group-hover:text-red-400 transition-colors">
+                {/* PC Info */}
+                <h3 className="text-lg font-bold text-white">
                   {pc.name}
                 </h3>
 
-                <div className="mt-2 flex items-baseline justify-between">
-                  <div className="text-2xl font-black text-red-500 sm:text-3xl">
-                    {formatPrice(pc.price)}
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-400">
-                    Incl. GST & White-Glove Setup
-                  </span>
-                </div>
+                <p className="mt-1 text-2xl font-black text-red-500">
+                  {formatPrice(pc.price)}
+                </p>
 
-                {/* Specs Pill List */}
-                <ul className="mt-5 space-y-2 border-t border-zinc-800/80 pt-4 text-xs text-zinc-300">
-                  {pc.specs.slice(0, 4).map((spec, idx) => (
-                    <li key={idx} className="flex items-center gap-2">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-red-400 text-[10px] font-bold">
-                        ✓
-                      </span>
-                      <span className="truncate">{spec}</span>
+                {/* Specs List */}
+                <ul className="mt-4 space-y-1.5 border-t border-zinc-800/80 pt-3 text-xs text-zinc-300">
+                  {pc.specs.map((spec, i) => (
+                    <li key={i} className="truncate text-zinc-400">
+                      • {spec}
                     </li>
                   ))}
                 </ul>
+              </div>
 
-                {/* Action CTA */}
-                <div className="mt-6">
-                  <Link
-                    href="/ready-pcs"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 hover:shadow-red-600/40"
-                  >
-                    <span>View & Configure Rig</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
+              {/* Action Button */}
+              <div className="mt-6">
+                <Link
+                  href="/ready-pcs"
+                  className="block w-full rounded-xl bg-red-600 py-2.5 text-center text-xs font-bold text-white transition hover:bg-red-700"
+                >
+                  View Build
+                </Link>
               </div>
             </div>
           ))}
