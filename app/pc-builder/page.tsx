@@ -151,6 +151,7 @@ function extractPsuCapacity(psuName?: string): number {
   if (!psuName) return 0;
   const match = psuName.match(/(\d{3,4})\s*[wW]/);
   if (match) return parseInt(match[1], 10);
+  if (psuName.includes("1200")) return 1200;
   if (psuName.includes("1000")) return 1000;
   if (psuName.includes("850")) return 850;
   if (psuName.includes("750")) return 750;
@@ -158,47 +159,155 @@ function extractPsuCapacity(psuName?: string): number {
   return 750;
 }
 
+function resolveSocket(item?: ComponentRow): string | null {
+  if (!item) return null;
+  if (item.socket && item.socket.trim()) {
+    return item.socket.toUpperCase().trim();
+  }
+  const name = item.name.toLowerCase();
+  if (
+    name.includes("am5") ||
+    name.includes("7600") ||
+    name.includes("7700") ||
+    name.includes("7800") ||
+    name.includes("7900") ||
+    name.includes("7950") ||
+    name.includes("9600") ||
+    name.includes("9700") ||
+    name.includes("9800") ||
+    name.includes("9900") ||
+    name.includes("9950") ||
+    name.includes("b650") ||
+    name.includes("x670") ||
+    name.includes("x870")
+  ) {
+    return "AM5";
+  }
+  if (
+    name.includes("am4") ||
+    name.includes("5600") ||
+    name.includes("5700") ||
+    name.includes("5800") ||
+    name.includes("5900") ||
+    name.includes("5950") ||
+    name.includes("3600") ||
+    name.includes("b550") ||
+    name.includes("b450") ||
+    name.includes("x570")
+  ) {
+    return "AM4";
+  }
+  if (
+    name.includes("lga1700") ||
+    name.includes("14600") ||
+    name.includes("14700") ||
+    name.includes("14900") ||
+    name.includes("13600") ||
+    name.includes("13700") ||
+    name.includes("13900") ||
+    name.includes("12400") ||
+    name.includes("b760") ||
+    name.includes("z790") ||
+    name.includes("b660") ||
+    name.includes("z690")
+  ) {
+    return "LGA1700";
+  }
+  return null;
+}
+
+function resolveRamGeneration(item?: ComponentRow): "DDR4" | "DDR5" | null {
+  if (!item) return null;
+  const combined = (item.name + " " + (item.speed || "") + " " + (item.capacity || "")).toLowerCase();
+  if (combined.includes("ddr4")) return "DDR4";
+  if (combined.includes("ddr5")) return "DDR5";
+  return null;
+}
+
 function getCompatibilityIssues(build: Build): CompatibilityIssue[] {
   const issues: CompatibilityIssue[] = [];
 
-  // 1. Socket compatibility (CPU vs Motherboard)
+  // 1. Physical Socket Architecture Match (CPU vs Motherboard)
   if (build.cpu && build.motherboard) {
-    const cpuName = build.cpu.name.toLowerCase();
-    const moboName = build.motherboard.name.toLowerCase();
+    const cpuSocket = resolveSocket(build.cpu);
+    const moboSocket = resolveSocket(build.motherboard);
 
-    const isAm5Cpu = cpuName.includes("ryzen") && (cpuName.includes("7600") || cpuName.includes("7800") || cpuName.includes("9950") || cpuName.includes("9800"));
-    const isAm5Mobo = moboName.includes("b650") || moboName.includes("x670") || moboName.includes("x870");
-
-    if (isAm5Cpu && !isAm5Mobo) {
+    if (cpuSocket && moboSocket && cpuSocket !== moboSocket) {
       issues.push({
         categories: ["cpu", "motherboard"],
-        message: `${build.cpu.name} requires an AMD AM5 socket motherboard (B650 / X670 / X870).`,
+        message: `Incompatible Socket: ${build.cpu.name} uses the ${cpuSocket} socket, but ${build.motherboard.name} is designed for ${moboSocket}. These parts cannot physically mate.`,
       });
     }
   }
 
-  // 2. RAM Generation compatibility (DDR5 vs Motherboard)
-  if (build.ram && build.motherboard) {
-    const ramName = build.ram.name.toLowerCase();
-    const moboName = build.motherboard.name.toLowerCase();
+  // 2. RAM Generation Compatibility (DDR4 vs DDR5)
+  if (build.ram) {
+    const ramGen = resolveRamGeneration(build.ram);
+    const cpuSocket = build.cpu ? resolveSocket(build.cpu) : null;
+    const moboSocket = build.motherboard ? resolveSocket(build.motherboard) : null;
 
-    if (ramName.includes("ddr5") && moboName.includes("b550")) {
+    // AM4 Platform: Strictly DDR4
+    if (cpuSocket === "AM4" && ramGen === "DDR5") {
       issues.push({
-        categories: ["ram", "motherboard"],
-        message: "DDR5 Memory is physically incompatible with AM4 B550 motherboards.",
+        categories: ["cpu", "ram"],
+        message: `Memory Conflict: AMD AM4 platform (${build.cpu?.name}) exclusively supports DDR4. ${build.ram.name} is DDR5 and cannot be used.`,
+      });
+    }
+    if (moboSocket === "AM4" && ramGen === "DDR5") {
+      issues.push({
+        categories: ["motherboard", "ram"],
+        message: `DIMM Slot Mismatch: ${build.motherboard?.name} (AM4) has DDR4 memory slots only. ${build.ram.name} (DDR5) cannot be inserted.`,
+      });
+    }
+
+    // AM5 Platform: Strictly DDR5
+    if (cpuSocket === "AM5" && ramGen === "DDR4") {
+      issues.push({
+        categories: ["cpu", "ram"],
+        message: `Memory Conflict: AMD AM5 platform (${build.cpu?.name}) strictly requires DDR5 memory. ${build.ram.name} (DDR4) is not supported.`,
+      });
+    }
+    if (moboSocket === "AM5" && ramGen === "DDR4") {
+      issues.push({
+        categories: ["motherboard", "ram"],
+        message: `DIMM Slot Mismatch: AM5 motherboards (${build.motherboard?.name}) feature DDR5 slots only. DDR4 memory cannot physically fit.`,
       });
     }
   }
 
-  // 3. Power Supply Headroom
-  if (build.psu && (build.gpu || build.cpu)) {
+  // 3. Power Supply Headroom & Capacity
+  if (build.psu) {
     const { total } = estimateSystemWattage(build);
     const psuCapacity = extractPsuCapacity(build.psu.name);
 
-    if (psuCapacity > 0 && total > psuCapacity - 75) {
+    if (psuCapacity > 0 && total > psuCapacity) {
       issues.push({
         categories: ["psu", "gpu"],
-        message: `${build.psu.name} (${psuCapacity}W) has insufficient headroom for this build (${total}W peak). Recommend at least ${total + 150}W PSU.`,
+        message: `Critical Power Overdraw: Estimated peak draw is ~${total}W, exceeding the ${psuCapacity}W rating of ${build.psu.name}. Overcurrent tripping will occur.`,
+      });
+    } else if (psuCapacity > 0 && total > psuCapacity - 75) {
+      issues.push({
+        categories: ["psu", "gpu"],
+        message: `Tight Power Headroom: Estimated draw is ~${total}W, leaving under 75W buffer for ${build.psu.name} (${psuCapacity}W). Recommended: ${total + 150}W+ PSU for transient power spikes.`,
+      });
+    }
+  }
+
+  // 4. Thermal Cooling Headroom
+  if (build.cpu && build.cooling) {
+    const cpuName = build.cpu.name.toLowerCase();
+    const coolerName = build.cooling.name.toLowerCase();
+    const isExtremeTdp =
+      cpuName.includes("14900k") ||
+      cpuName.includes("9950x") ||
+      cpuName.includes("14700k") ||
+      cpuName.includes("7950x");
+    const isBasicAirCooler = coolerName.includes("ag400") || coolerName.includes("single-tower");
+
+    if (isExtremeTdp && isBasicAirCooler) {
+      issues.push({
+        categories: ["cpu", "cooling"],
+        message: `Thermal Dissipation Bottleneck: ${build.cpu.name} outputs up to 250W+ peak thermal load. ${build.cooling.name} will struggle under sustained load. A 240mm or 360mm Liquid AIO is recommended.`,
       });
     }
   }
@@ -532,6 +641,19 @@ export default function PCBuilderPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Explicit Conflict Alert on Component Card */}
+                      {conflict && (
+                        <div className="mt-3 flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-950/50 p-3 text-xs text-red-300">
+                          <AlertTriangle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
+                          <div className="leading-relaxed">
+                            <strong className="block text-red-200 font-semibold mb-0.5">
+                              Compatibility Issue
+                            </strong>
+                            {issues.find((i) => i.categories.includes(cat.key))?.message}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -610,17 +732,26 @@ export default function PCBuilderPage() {
                     <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
                     <div>
                       <strong className="block text-emerald-300">100% Architecture Compatible</strong>
-                      All components matched for physical clearance and thermal synergy.
+                      All components matched for physical clearance, socket synergy, and thermal headroom.
                     </div>
                   </>
                 ) : hasBlockingIssues ? (
-                  <>
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
-                    <div>
-                      <strong className="block text-red-300">Compatibility Alert</strong>
-                      {issues[0]?.message}
+                  <div className="space-y-2.5 w-full">
+                    <div className="flex items-center gap-2 text-red-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
+                      <strong className="block text-red-300 font-bold uppercase tracking-wider text-[11px]">
+                        Compatibility Alert ({issues.length} {issues.length === 1 ? "Issue" : "Issues"} Found)
+                      </strong>
                     </div>
-                  </>
+                    <ul className="space-y-2 border-t border-red-500/20 pt-2 text-[11px] text-red-200/90">
+                      {issues.map((issue, idx) => (
+                        <li key={idx} className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-red-500 font-bold mt-0.5">•</span>
+                          <span>{issue.message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
                   <>
                     <Sliders className="h-4 w-4 shrink-0 mt-0.5 text-zinc-400" />
