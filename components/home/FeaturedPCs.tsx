@@ -53,7 +53,7 @@ const DATABASE_FALLBACK_PCS: ReadyPC[] = [
   },
   {
     id: 4,
-    name: "Zen Apex Titan",
+    name: "Zen Apex",
     price: 1499999,
     badge: "Apex Sovereign",
     image: "/images/pcs/zen-apex.png",
@@ -90,10 +90,16 @@ export default function FeaturedPCs() {
           .order("price", { ascending: true });
 
         if (!error && data && data.length > 0) {
-          const dbNames = new Set(data.map((p) => p.name.toLowerCase()));
-          const missingFallbacks = DATABASE_FALLBACK_PCS.filter(
-            (fb) => !dbNames.has(fb.name.toLowerCase())
+          const existingIds = new Set(data.map((p) => p.id));
+          const existingNames = new Set(
+            data.map((p) => p.name.toLowerCase().replace(" titan", "").trim())
           );
+
+          const missingFallbacks = DATABASE_FALLBACK_PCS.filter((fb) => {
+            const cleanName = fb.name.toLowerCase().replace(" titan", "").trim();
+            return !existingIds.has(fb.id) && !existingNames.has(cleanName);
+          });
+
           const combined = [...data, ...missingFallbacks].sort((a, b) => a.price - b.price);
           setPcs(combined as ReadyPC[]);
         }
@@ -132,7 +138,7 @@ export default function FeaturedPCs() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {pcs.map((pc) => (
             <div
-              key={pc.id}
+              key={`${pc.id}-${pc.name}`}
               className="flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 transition hover:border-zinc-700"
             >
               <div>
