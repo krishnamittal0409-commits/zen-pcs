@@ -7,6 +7,21 @@ import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import {
+  User,
+  ShieldCheck,
+  Package,
+  ShoppingBag,
+  Camera,
+  ArrowRight,
+  Check,
+  Sparkles,
+  Mail,
+  Lock,
+  Headphones,
+  Sliders,
+  ExternalLink,
+} from "lucide-react";
 
 const supabase = createClient();
 
@@ -37,6 +52,7 @@ export default function AccountPage() {
   const [nameInput, setNameInput] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +101,7 @@ export default function AccountPage() {
   async function handleSaveName() {
     if (!user) return;
     setSavingName(true);
+    setSaveSuccess(false);
 
     const { error } = await supabase
       .from("profiles")
@@ -98,6 +115,8 @@ export default function AccountPage() {
     }
 
     setProfile((prev) => ({ ...(prev ?? { avatar_url: null }), full_name: nameInput }));
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -162,8 +181,6 @@ export default function AccountPage() {
         setAuthError(error.message);
         return;
       }
-      // No redirect needed — useAuth() picks up the new session and this
-      // page re-renders into the signed-in view automatically.
     } else {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -185,248 +202,433 @@ export default function AccountPage() {
   const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white">
       <Navbar />
 
-      <section className="mx-auto max-w-4xl px-8 py-24">
-        <div className="mb-10 flex items-center justify-between">
-          <h1 className="text-4xl font-black">
-            Your <span className="text-red-500">Account</span>
-          </h1>
+      {/* Hero Ambient Header */}
+      <section className="relative overflow-hidden border-b border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-black to-black py-16">
+        <div className="absolute top-0 right-1/4 h-80 w-80 rounded-full bg-red-600/10 blur-[140px] pointer-events-none" />
 
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
-              >
-                Admin Panel
-              </Link>
-            )}
+        <div className="mx-auto max-w-6xl px-6 lg:px-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-red-500">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Atelier Client Portal</span>
+              </div>
+              <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
+                Personal <span className="text-red-500">Dashboard</span>
+              </h1>
+              <p className="mt-1 text-xs text-zinc-400">
+                Manage your hardware preferences, order telemetry, and verified atelier profile.
+              </p>
+            </div>
 
-            {user && (
-              <button
-                type="button"
-                onClick={() => signOut()}
-                className="rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-gray-300 transition hover:border-red-500 hover:text-red-500"
-              >
-                Log out
-              </button>
-            )}
+            {/* Quick Action Badges */}
+            <div className="flex flex-wrap items-center gap-3">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-red-950/40 transition hover:bg-red-700"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Admin Panel
+                </Link>
+              )}
+
+              {user && (
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-red-500 hover:text-red-400"
+                >
+                  Sign Out
+                </button>
+              )}
+            </div>
           </div>
         </div>
+      </section>
 
+      {/* Main Content Area */}
+      <section className="mx-auto max-w-6xl px-6 py-12 lg:px-8">
         {authLoading || loading ? (
-          <p className="text-gray-400">Loading…</p>
-        ) : !user ? (
-          <div className="mx-auto max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
-            <p className="mb-6 text-center text-gray-400">
-              {authMode === "signin"
-                ? "Sign in to view your account."
-                : "Create an account to get started."}
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-zinc-800/80 bg-zinc-950/60 p-20 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-500 border-t-transparent mb-4" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Synchronizing Atelier Profile...
             </p>
+          </div>
+        ) : !user ? (
+          /* Sign-in / Sign-up Luxury Box */
+          <div className="mx-auto max-w-md overflow-hidden rounded-3xl border border-zinc-800/90 bg-zinc-950 p-8 shadow-2xl">
+            {/* Header / Tabs */}
+            <div className="mb-6 text-center">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/30 bg-red-600/10 text-red-500 mb-3">
+                <User className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-black text-white">
+                {authMode === "signin" ? "Welcome Back" : "Join Zen PCs Atelier"}
+              </h2>
+              <p className="mt-1 text-xs text-zinc-400">
+                {authMode === "signin"
+                  ? "Access your saved builds, order pipeline, and concierge."
+                  : "Create an account for personalized hardware assembly."}
+              </p>
+            </div>
 
-            <div className="flex flex-col gap-4">
+            {/* Mode Switcher Tabs */}
+            <div className="mb-6 grid grid-cols-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signin");
+                  setAuthError(null);
+                  setAuthMessage(null);
+                }}
+                className={`rounded-lg py-2 transition ${
+                  authMode === "signin"
+                    ? "bg-red-600 text-white shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signup");
+                  setAuthError(null);
+                  setAuthMessage(null);
+                }}
+                className={`rounded-lg py-2 transition ${
+                  authMode === "signup"
+                    ? "bg-red-600 text-white shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+
+            {/* Email Form */}
+            <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm text-gray-400">Email</label>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <Mail className="h-3.5 w-3.5 text-zinc-500" />
+                  Email Address
+                </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+                  placeholder="alex@battlestation.com"
+                  className="w-full rounded-xl border border-zinc-800 bg-black/90 px-4 py-3 text-xs text-white placeholder-zinc-600 shadow-inner outline-none transition focus:border-red-500"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-400">Password</label>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <Lock className="h-3.5 w-3.5 text-zinc-500" />
+                  Password
+                </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+                  placeholder="••••••••••••"
+                  className="w-full rounded-xl border border-zinc-800 bg-black/90 px-4 py-3 text-xs text-white placeholder-zinc-600 shadow-inner outline-none transition focus:border-red-500"
                 />
               </div>
 
-              {authError && <p className="text-sm text-red-500">{authError}</p>}
-              {authMessage && <p className="text-sm text-green-400">{authMessage}</p>}
+              {authError && (
+                <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-3 text-xs text-red-300">
+                  {authError}
+                </div>
+              )}
+              {authMessage && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300">
+                  {authMessage}
+                </div>
+              )}
 
               <button
                 type="button"
                 onClick={handleEmailAuth}
                 disabled={authSubmitting}
-                className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                className="w-full rounded-xl bg-red-600 py-3 text-xs font-bold text-white shadow-lg shadow-red-950/50 transition hover:bg-red-700 disabled:opacity-60"
               >
                 {authSubmitting
-                  ? "Please wait…"
+                  ? "Authenticating…"
                   : authMode === "signin"
-                  ? "Sign In"
-                  : "Create Account"}
+                  ? "Sign In to Account"
+                  : "Register New Account"}
               </button>
 
-              <div className="flex items-center gap-3 text-xs text-gray-600">
+              <div className="flex items-center gap-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
                 <div className="h-px flex-1 bg-zinc-800" />
-                OR
+                Secure Single Sign-On
                 <div className="h-px flex-1 bg-zinc-800" />
               </div>
 
               <button
                 type="button"
                 onClick={signInWithGoogle}
-                className="rounded-xl border border-zinc-700 bg-black px-6 py-3 font-semibold text-white hover:bg-zinc-900"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 py-3 text-xs font-bold text-white transition hover:border-zinc-700 hover:bg-zinc-900"
               >
-                Sign in with Google
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"
+                  />
+                </svg>
+                Continue with Google
               </button>
-
-              <p className="text-center text-sm text-gray-500">
-                {authMode === "signin" ? (
-                  <>
-                    Don&apos;t have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode("signup");
-                        setAuthError(null);
-                        setAuthMessage(null);
-                      }}
-                      className="text-red-500 hover:underline"
-                    >
-                      Sign up
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode("signin");
-                        setAuthError(null);
-                        setAuthMessage(null);
-                      }}
-                      className="text-red-500 hover:underline"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* Profile section */}
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
-              <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold">
-                <span className="h-6 w-1 rounded-full bg-red-600" />
-                Profile
-              </h2>
+          /* Signed In Client Dashboard View */
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            {/* Left 7 Columns: Profile Identity Card */}
+            <div className="space-y-6 lg:col-span-7">
+              {/* Profile Card */}
+              <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 sm:p-8 shadow-xl">
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-5 mb-6">
+                  <h2 className="flex items-center gap-2.5 text-base font-bold text-white">
+                    <User className="h-4 w-4 text-red-500" />
+                    Identity & Security
+                  </h2>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    Verified Member
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-6">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
-                  {profile?.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profile.avatar_url}
-                      alt="Profile picture"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-gray-500">
-                      {user.email?.[0]?.toUpperCase() ?? "?"}
+                {/* Avatar & Email Block */}
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                  <div className="relative group h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-md">
+                    {profile?.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile avatar"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xl font-black text-red-500">
+                        {user.email?.[0]?.toUpperCase() ?? "Z"}
+                      </div>
+                    )}
+
+                    {/* Camera upload overlay */}
+                    <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/60 opacity-0 backdrop-blur-xs transition group-hover:opacity-100">
+                      <Camera className="h-5 w-5 text-white" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                        disabled={uploadingAvatar}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">
+                        {profile?.full_name || "Zen Enthusiast"}
+                      </span>
+                      {isAdmin && (
+                        <span className="rounded bg-red-600/20 px-1.5 py-0.5 text-[10px] font-bold text-red-400 border border-red-500/30">
+                          Admin
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <p className="mt-0.5 text-xs text-zinc-400 font-mono">{user.email}</p>
+                    <label className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 cursor-pointer">
+                      <Camera className="h-3 w-3" />
+                      <span>{uploadingAvatar ? "Uploading photo…" : "Update Profile Photo"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                        disabled={uploadingAvatar}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="cursor-pointer text-sm font-medium text-red-500 hover:underline">
-                    {uploadingAvatar ? "Uploading…" : "Change picture"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                      disabled={uploadingAvatar}
-                    />
+                {/* Edit Display Name */}
+                <div className="mt-8 border-t border-zinc-800/80 pt-6">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Display Name
                   </label>
-                  <p className="mt-1 text-xs text-gray-500">{user.email}</p>
+                  <div className="flex gap-2.5">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Enter your name or gamer handle"
+                      className="w-full rounded-xl border border-zinc-800 bg-black/90 px-4 py-2.5 text-xs text-white placeholder-zinc-600 shadow-inner outline-none focus:border-red-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveName}
+                      disabled={savingName}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-60 shadow-md shadow-red-950/40"
+                    >
+                      {savingName ? (
+                        "Saving…"
+                      ) : saveSuccess ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> Saved
+                        </>
+                      ) : (
+                        "Save"
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6">
-                <label className="mb-2 block text-sm text-gray-400">Display name</label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    placeholder="Enter your name"
-                    className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveName}
-                    disabled={savingName}
-                    className="shrink-0 rounded-xl bg-red-600 px-6 py-3 font-semibold hover:bg-red-700 disabled:opacity-60"
-                  >
-                    {savingName ? "Saving…" : "Save"}
-                  </button>
+                {/* Atelier Security Guarantee Note */}
+                <div className="mt-6 flex items-start gap-2.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-4 text-xs text-zinc-400">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                  <span className="leading-relaxed">
+                    All hardware reservations and custom configuration designs are securely
+                    associated with your verified credentials.
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Cart summary section */}
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
-              <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold">
-                <span className="h-6 w-1 rounded-full bg-red-600" />
-                Cart Summary
-              </h2>
+            {/* Right 5 Columns: Hub Cards (Orders, Cart & Concierge) */}
+            <div className="space-y-6 lg:col-span-5">
+              {/* Order Tracking Quick Hub */}
+              <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 shadow-xl">
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-4">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Package className="h-4 w-4 text-red-500" />
+                    Build & Order Tracking
+                  </h3>
+                  <Link
+                    href="/orders"
+                    className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1"
+                  >
+                    View All <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
 
-              {cartItems.length === 0 ? (
-                <p className="text-gray-500">Your cart is empty.</p>
-              ) : (
-                <>
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                  Track the 5-stage cleanroom assembly, 48-hour thermal stress tests, and courier transit.
+                </p>
+
+                <Link
+                  href="/orders"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/80 py-2.5 text-xs font-bold text-white transition hover:border-red-500 hover:text-white"
+                >
+                  <Package className="h-3.5 w-3.5 text-red-400" />
+                  Launch Live Order Tracker
+                </Link>
+              </div>
+
+              {/* Cart Summary Card */}
+              <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 shadow-xl">
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-4">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                    <ShoppingBag className="h-4 w-4 text-red-500" />
+                    Active Cart
+                  </h3>
+                  <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[10px] font-bold text-zinc-300">
+                    {cartItems.length} {cartItems.length === 1 ? "Item" : "Items"}
+                  </span>
+                </div>
+
+                {cartItems.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-zinc-500">
+                    Your cart is currently empty.
+                  </div>
+                ) : (
                   <div className="space-y-3">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-300">
-                          {item.name} × {item.quantity}
+                    {cartItems.slice(0, 3).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-xs">
+                        <span className="truncate pr-2 text-zinc-300 font-medium">
+                          {item.name} <span className="text-zinc-500">×{item.quantity}</span>
                         </span>
-                        <span className="text-gray-400">
+                        <span className="shrink-0 font-bold text-white">
                           {formatPrice(item.price * item.quantity)}
                         </span>
                       </div>
                     ))}
-                  </div>
-                  <div className="my-4 border-t border-zinc-800" />
-                  <div className="flex items-center justify-between font-semibold">
-                    <span>Total</span>
-                    <span className="text-red-500">{formatPrice(cartTotal)}</span>
-                  </div>
-                </>
-              )}
+                    {cartItems.length > 3 && (
+                      <p className="text-[10px] text-zinc-500 italic">
+                        +{cartItems.length - 3} more items in cart...
+                      </p>
+                    )}
 
-              <Link
-                href="/cart"
-                className="mt-6 inline-block text-sm text-red-500 hover:underline"
-              >
-                Go to full cart →
-              </Link>
-            </div>
+                    <div className="border-t border-zinc-800/80 pt-3 flex justify-between items-baseline">
+                      <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Subtotal:
+                      </span>
+                      <span className="text-base font-black text-red-500">
+                        {formatPrice(cartTotal)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Order history link */}
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
-              <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold">
-                <span className="h-6 w-1 rounded-full bg-red-600" />
-                Order History
-              </h2>
-              <Link href="/orders" className="text-sm text-red-500 hover:underline">
-                View your orders →
-              </Link>
+                <div className="mt-5 flex gap-2">
+                  <Link
+                    href="/cart"
+                    className="flex-1 rounded-xl bg-red-600 py-2.5 text-center text-xs font-bold text-white transition hover:bg-red-700 shadow-md shadow-red-950/40"
+                  >
+                    View Full Cart
+                  </Link>
+                  <Link
+                    href="/pc-builder"
+                    className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-3 py-2.5 text-center text-xs font-bold text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                  >
+                    <Sliders className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* VIP Concierge Card */}
+              <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-3 mb-3 text-xs font-bold uppercase tracking-wider text-white">
+                  <Headphones className="h-4 w-4 text-red-500" />
+                  VIP Hardware Concierge
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Direct engineer assistance for custom watercooling loops, corporate workstations, or delivery questions.
+                </p>
+                <div className="mt-4 flex items-center justify-between border-t border-zinc-800/60 pt-3 text-xs">
+                  <span className="text-zinc-500 font-mono text-[11px]">krishnamittal0409@gmail.com</span>
+                  <Link
+                    href="/support"
+                    className="font-bold text-red-400 hover:text-red-300 flex items-center gap-1"
+                  >
+                    Open Ticket <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </section>
-          <Footer />
+
+      <Footer />
     </main>
   );
 }

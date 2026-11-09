@@ -1,41 +1,11 @@
 // app/support/page.tsx
-//
-// Support page — three parts:
-// 1. Contact info card (your support email)
-// 2. FAQ list (expand/collapse)
-// 3. "Raise a Ticket" form — saves to a Supabase table called
-//    `support_tickets`, with an optional image attachment (max 1 MB).
-//
-// ----- Supabase table you need (or already have) -----
-// Table name: support_tickets
-// Columns:
-//   id               → int8, primary key, auto-increment
-//   name             → text
-//   email            → text
-//   order_id         → text (nullable)
-//   category         → text
-//   message          → text
-//   status           → text, default "open"
-//   attachment_url   → text, nullable   ← NEW, add this column for images
-//   created_at       → timestamptz, default now()
-//
-// ----- Supabase Storage bucket you need to create -----
-// 1. Supabase → Storage → "New bucket"
-// 2. Name it exactly: support-attachments
-// 3. Toggle it to "Public bucket" (so the image URL we save is viewable
-//    without extra auth — fine for support screenshots)
-// 4. Save
-//
-// Once both exist, attaching an image and submitting will upload the file
-// to that bucket and store its public URL in the attachment_url column.
-
 "use client";
 
 import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "../../lib/supabase";
-
+import { Headphones, ShieldCheck, HelpCircle, Mail, Send, CheckCircle2 } from "lucide-react";
 
 const SUPPORT_EMAIL = "krishnamittal0409@gmail.com";
 
@@ -66,15 +36,15 @@ const FAQS = [
   {
     question: "Can I track my order status?",
     answer:
-      "Yes you can through your Account Dashboard.",
+      "Yes you can through your Account Dashboard and live order tracking portal.",
   },
 ];
 
 const CATEGORIES = [
-  { key: "general", label: "General Question" },
-  { key: "order_issue", label: "Order Issue" },
-  { key: "byop", label: "Bring Your Parts" },
-  { key: "warranty", label: "Warranty Claim" },
+  { key: "general", label: "General Hardware Inquiry" },
+  { key: "order_issue", label: "Order & Build Status" },
+  { key: "byop", label: "Bring Your Own Parts (BYOP)" },
+  { key: "warranty", label: "Warranty & RMA Claim" },
 ];
 
 export default function SupportPage() {
@@ -128,8 +98,6 @@ export default function SupportPage() {
 
     setSubmitting(true);
 
-    // If an image was attached, upload it to Supabase Storage first and
-    // get back a public URL to save alongside the ticket.
     let attachmentUrl: string | null = null;
 
     if (attachment) {
@@ -180,68 +148,96 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white">
       <Navbar />
 
-      <main className="mx-auto max-w-6xl px-6 py-16">
-        {/* ---------- Hero ---------- */}
-        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-red-500">
-          <span className="text-red-500">•</span> Support
-        </div>
+      {/* Header Banner */}
+      <section className="relative overflow-hidden border-b border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-black to-black py-16">
+        <div className="absolute top-0 right-1/4 h-80 w-80 rounded-full bg-red-600/10 blur-[130px] pointer-events-none" />
 
-        <h1 className="mt-4 text-5xl font-extrabold leading-tight sm:text-6xl">
-          We&apos;re Here to <span className="text-red-500">Help</span>
-        </h1>
+        <div className="mx-auto max-w-5xl px-6 lg:px-8">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-red-500">
+            <Headphones className="h-4 w-4" />
+            <span>Hardware Concierge & Client Support</span>
+          </div>
 
-        <p className="mt-6 max-w-2xl text-lg text-gray-400">
-          Check the FAQ below, or raise a ticket and we&apos;ll get back to
-          you directly.
-        </p>
+          <h1 className="mt-3 text-4xl font-black text-white sm:text-5xl">
+            We&apos;re Here to <span className="text-red-500">Help</span>
+          </h1>
 
-        {/* ---------- Contact info card ---------- */}
-        <section className="mt-10 rounded-2xl border border-red-900/60 bg-[#0D0D0D] p-8">
-          <h2 className="flex items-center gap-3 text-2xl font-bold">
-            <span className="h-6 w-1 rounded bg-red-600" />
-            Contact Us Directly
-          </h2>
-          <p className="mt-3 text-sm text-gray-400">
-            Prefer email? Reach us anytime at:
+          <p className="mt-2 text-sm text-zinc-400 max-w-2xl">
+            Explore frequent questions on warranties and assembly, or submit a direct inquiry
+            to our senior lab technicians.
           </p>
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className="mt-1 inline-block text-lg font-semibold text-red-500 hover:text-red-400"
-          >
-            {SUPPORT_EMAIL}
-          </a>
+        </div>
+      </section>
+
+      <main className="mx-auto max-w-5xl px-6 py-12 lg:px-8 space-y-8">
+        {/* Contact direct card */}
+        <section className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 sm:p-8 shadow-xl">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+                Direct Lab Channel
+              </span>
+              <h2 className="text-lg font-bold text-white mt-1">
+                Reach Engineering Concierge Directly
+              </h2>
+              <p className="mt-1 text-xs text-zinc-400">
+                Average reply time within 4 hours during testing lab hours (Mon - Sat).
+              </p>
+            </div>
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/90 px-5 py-3 text-xs font-bold text-red-400 hover:border-red-500 hover:text-white transition shadow-sm"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span>{SUPPORT_EMAIL}</span>
+            </a>
+          </div>
         </section>
 
-        {/* ---------- FAQ ---------- */}
-        <section className="mt-6 rounded-2xl border border-red-900/60 bg-[#0D0D0D] p-8">
-          <h2 className="flex items-center gap-3 text-2xl font-bold">
-            <span className="h-6 w-1 rounded bg-red-600" />
-            Frequently Asked Questions
-          </h2>
+        {/* FAQ Section */}
+        <section className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 sm:p-8 shadow-xl">
+          <div className="border-b border-zinc-800/80 pb-4 mb-6">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+              Knowledge Base
+            </span>
+            <h2 className="text-xl font-black text-white mt-1">
+              Frequently Answered Questions
+            </h2>
+          </div>
 
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {FAQS.map((faq, index) => {
               const isOpen = openFaq === index;
               return (
                 <div
                   key={faq.question}
-                  className="rounded-lg border border-[#262626] bg-black"
+                  className={`rounded-2xl border transition-all ${
+                    isOpen
+                      ? "border-zinc-700 bg-zinc-900/80"
+                      : "border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700"
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => setOpenFaq(isOpen ? null : index)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-white"
+                    className="flex w-full items-center justify-between px-5 py-4 text-left text-xs sm:text-sm font-semibold text-white"
                   >
-                    {faq.question}
-                    <span className="text-red-500">{isOpen ? "−" : "+"}</span>
+                    <span>{faq.question}</span>
+                    <span
+                      className={`text-base font-bold transition-transform ${
+                        isOpen ? "text-red-500 rotate-45" : "text-zinc-500"
+                      }`}
+                    >
+                      +
+                    </span>
                   </button>
                   {isOpen && (
-                    <p className="border-t border-[#1F1F1F] px-4 py-3 text-sm text-gray-400">
+                    <div className="border-t border-zinc-800/80 px-5 py-3.5 text-xs text-zinc-300 leading-relaxed">
                       {faq.answer}
-                    </p>
+                    </div>
                   )}
                 </div>
               );
@@ -249,68 +245,77 @@ export default function SupportPage() {
           </div>
         </section>
 
-        {/* ---------- Raise a ticket ---------- */}
-        <section className="mt-6 rounded-2xl border border-red-900/60 bg-[#0D0D0D] p-8">
-          <h2 className="flex items-center gap-3 text-2xl font-bold">
-            <span className="h-6 w-1 rounded bg-red-600" />
-            Raise a Ticket
-          </h2>
+        {/* Raise a ticket */}
+        <section className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-6 sm:p-8 shadow-xl">
+          <div className="border-b border-zinc-800/80 pb-4 mb-6">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+              Ticket Submission
+            </span>
+            <h2 className="text-xl font-black text-white mt-1">
+              Open a Dedicated Service Ticket
+            </h2>
+          </div>
 
           {success ? (
-            <div className="mt-6 rounded-lg border border-green-800 bg-green-950/30 px-4 py-4 text-sm text-green-400">
-              Ticket submitted! We&apos;ll get back to you at the email you
-              provided.
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-6 text-xs text-emerald-300">
+              <strong className="block text-sm font-bold mb-1 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4" /> Ticket Submitted Successfully!
+              </strong>
+              Your service ticket has been routed to our lab queue. A confirmation email and status update
+              will be dispatched to your inbox shortly.
             </div>
           ) : (
-            <div className="mt-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-5">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                    Your Name
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    Full Name
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-white"
+                    placeholder="Alex Morgan"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs text-white placeholder-zinc-600 shadow-inner outline-none focus:border-red-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                    Your Email
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    Email Address
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-white"
+                    placeholder="alex@battlestation.com"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs text-white placeholder-zinc-600 shadow-inner outline-none focus:border-red-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                    Order ID (optional)
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    Order Reference ID (Optional)
                   </label>
                   <input
                     type="text"
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                     placeholder="e.g. ZEN-1042"
-                    className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-white placeholder:text-gray-600"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs text-white placeholder-zinc-600 shadow-inner outline-none focus:border-red-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                    Category
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    Inquiry Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-white"
+                    className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs text-white shadow-inner outline-none focus:border-red-500"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.key} value={c.key}>
@@ -322,29 +327,30 @@ export default function SupportPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                  Message
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  Detailed Hardware Message
                 </label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
-                  className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-white"
+                  placeholder="Describe your inquiry, component questions, or service requirement..."
+                  className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2.5 text-xs text-white placeholder-zinc-600 shadow-inner outline-none focus:border-red-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                  Attach Image (optional, max 1 MB)
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  Attach Screenshot or Invoice (optional, max 1 MB)
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleAttachmentChange}
-                  className="mt-2 w-full rounded-lg border border-[#262626] bg-black px-4 py-3 text-sm text-gray-300 file:mr-4 file:rounded-md file:border-0 file:bg-red-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-red-700"
+                  className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-black/80 px-4 py-2 text-xs text-zinc-400 file:mr-4 file:rounded-lg file:border-0 file:bg-red-600 file:px-3 file:py-1 file:text-xs file:font-bold file:text-white hover:file:bg-red-700"
                 />
                 {attachment && !attachmentError && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-[11px] text-zinc-400">
                     {attachment.name} ({Math.round(attachment.size / 1024)} KB)
                   </p>
                 )}
@@ -353,21 +359,23 @@ export default function SupportPage() {
                 )}
               </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && <p className="text-xs text-red-500">{error}</p>}
 
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="self-start rounded-lg bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 self-start rounded-xl bg-red-600 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-50 shadow-md shadow-red-950/40"
               >
-                {submitting ? "Submitting…" : "Submit Ticket"}
+                <Send className="h-3.5 w-3.5" />
+                <span>{submitting ? "Transmitting…" : "Transmit Service Ticket"}</span>
               </button>
             </div>
           )}
         </section>
-            <Footer />
-    </main>
+      </main>
+
+      <Footer />
     </div>
   );
 }

@@ -148,26 +148,78 @@ export default function OrdersPage() {
             </button>
           </div>
         ) : orders.length === 0 ? (
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-16 text-center shadow-xl">
-            <Package className="mx-auto h-14 w-14 text-zinc-700" />
-            <h2 className="mt-4 text-2xl font-bold text-white">No active orders placed yet</h2>
-            <p className="mt-2 text-xs text-zinc-400 max-w-md mx-auto">
-              Ready to construct your battlestation? Select a pre-configured ready PC or assemble
-              your custom components in the PC Builder.
-            </p>
-            <div className="mt-8 flex justify-center gap-4">
-              <Link
-                href="/ready-pcs"
-                className="rounded-xl bg-red-600 px-6 py-3 text-xs font-bold text-white transition hover:bg-red-700"
-              >
-                Browse Ready PCs
-              </Link>
-              <Link
-                href="/pc-builder"
-                className="rounded-xl border border-zinc-700 bg-zinc-900 px-6 py-3 text-xs font-bold text-zinc-300 transition hover:border-red-500 hover:text-white"
-              >
-                Launch Builder
-              </Link>
+          <div className="space-y-8">
+            {/* Empty State Banner */}
+            <div className="rounded-3xl border border-zinc-800/90 bg-zinc-950 p-12 text-center shadow-xl">
+              <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-zinc-500 mb-2">
+                <Package className="h-7 w-7 text-red-500" />
+              </div>
+              <h2 className="mt-2 text-2xl font-bold text-white">No active orders found</h2>
+              <p className="mt-2 text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                When you order a Ready-To-Ship system or configure a custom rig in our PC Builder,
+                your live cleanroom assembly telemetry and tracking will stream here.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/ready-pcs"
+                  className="rounded-xl bg-red-600 px-6 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 shadow-md shadow-red-950/40"
+                >
+                  Explore Ready PCs
+                </Link>
+                <Link
+                  href="/pc-builder"
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-6 py-2.5 text-xs font-bold text-zinc-300 transition hover:border-red-500 hover:text-white"
+                >
+                  Configure Custom Rig
+                </Link>
+              </div>
+            </div>
+
+            {/* Cleanroom Protocol Preview Showcase */}
+            <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+                    Zen PCs Assurance Protocol
+                  </span>
+                  <h3 className="text-base font-bold text-white mt-1">
+                    Standard 5-Stage Build & Verification Pipeline
+                  </h3>
+                </div>
+                <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-[10px] font-bold text-zinc-400">
+                  Every Build Included
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+                {BUILD_STAGES.map((stage, idx) => {
+                  const StageIcon = stage.icon;
+                  return (
+                    <div
+                      key={stage.key}
+                      className="flex flex-col items-center rounded-2xl border border-zinc-800/70 bg-zinc-900/50 p-4 text-center transition hover:border-zinc-700"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-red-400 mb-2">
+                        <StageIcon className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        Step 0{idx + 1}
+                      </span>
+                      <strong className="mt-1 text-xs font-bold text-white">{stage.label}</strong>
+                      <span className="mt-0.5 text-[10px] text-zinc-400 leading-tight">
+                        {stage.desc}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/60 pt-4 text-[11px] text-zinc-500">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Includes 48h FurMark + MemTest86 stress validation certificate
+                </span>
+                <span className="text-zinc-400">Direct courier tracking provided via SMS & Email</span>
+              </div>
             </div>
           </div>
         ) : (
