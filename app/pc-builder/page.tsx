@@ -295,32 +295,32 @@ export default function PCBuilderPage() {
     const newBuild: Build = {};
 
     if (tier === "titan5090") {
-      newBuild.cpu = components.find((c) => c.name.includes("9950X3D") || c.name.includes("7800X3D"));
+      newBuild.cpu = components.find((c) => c.name.includes("9950X") || c.name.includes("9800X3D") || c.name.includes("7800X3D"));
       newBuild.gpu = components.find((c) => c.name.includes("5090"));
       newBuild.motherboard = components.find((c) => c.name.includes("X870E") || c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.name.includes("32GB"));
-      newBuild.storage = components.find((c) => c.name.includes("2TB") || c.name.includes("1TB"));
-      newBuild.psu = components.find((c) => c.name.includes("1000") || c.name.includes("750"));
-      newBuild.cooling = components.find((c) => c.name.includes("360mm") || c.name.includes("H150"));
-      newBuild.case = components.find((c) => c.name.includes("H9") || c.name.includes("216"));
+      newBuild.ram = components.find((c) => c.name.includes("128GB") || c.name.includes("64GB") || c.name.includes("32GB"));
+      newBuild.storage = components.find((c) => c.name.includes("4TB") || c.name.includes("Crucial T705") || c.name.includes("2TB"));
+      newBuild.psu = components.find((c) => c.name.includes("1200") || c.name.includes("1000"));
+      newBuild.cooling = components.find((c) => c.name.includes("LCD") || c.name.includes("360mm"));
+      newBuild.case = components.find((c) => c.name.includes("H9") || c.name.includes("O11") || c.name.includes("216"));
     } else if (tier === "sweetspot5080") {
-      newBuild.cpu = components.find((c) => c.name.includes("7800X3D"));
-      newBuild.gpu = components.find((c) => c.name.includes("5080"));
+      newBuild.cpu = components.find((c) => c.name.includes("7800X3D") || c.name.includes("9800X3D"));
+      newBuild.gpu = components.find((c) => c.name.includes("5080") || c.name.includes("4080"));
       newBuild.motherboard = components.find((c) => c.name.includes("B650"));
       newBuild.ram = components.find((c) => c.name.includes("32GB"));
       newBuild.storage = components.find((c) => c.name.includes("2TB") || c.name.includes("1TB"));
-      newBuild.psu = components.find((c) => c.name.includes("1000") || c.name.includes("750"));
-      newBuild.cooling = components.find((c) => c.name.includes("AK620") || c.name.includes("H150"));
-      newBuild.case = components.find((c) => c.name.includes("216") || c.name.includes("H9"));
+      newBuild.psu = components.find((c) => c.name.includes("850") || c.name.includes("750"));
+      newBuild.cooling = components.find((c) => c.name.includes("360mm") || c.name.includes("AK620"));
+      newBuild.case = components.find((c) => c.name.includes("216") || c.name.includes("4000D"));
     } else {
       newBuild.cpu = components.find((c) => c.name.includes("7600"));
-      newBuild.gpu = components.find((c) => c.name.includes("4070") || c.name.includes("4060"));
+      newBuild.gpu = components.find((c) => c.name.includes("4060"));
       newBuild.motherboard = components.find((c) => c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.name.includes("16GB") || c.name.includes("32GB"));
+      newBuild.ram = components.find((c) => c.name.includes("16GB"));
       newBuild.storage = components.find((c) => c.name.includes("1TB"));
-      newBuild.psu = components.find((c) => c.name.includes("750"));
-      newBuild.cooling = components.find((c) => c.name.includes("AK620"));
-      newBuild.case = components.find((c) => c.name.includes("216"));
+      newBuild.psu = components.find((c) => c.name.includes("650") || c.name.includes("750"));
+      newBuild.cooling = components.find((c) => c.name.includes("AG400") || c.name.includes("AK620"));
+      newBuild.case = components.find((c) => c.name.includes("ICE-112") || c.name.includes("216"));
     }
 
     setBuild(newBuild);
