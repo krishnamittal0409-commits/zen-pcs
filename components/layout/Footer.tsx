@@ -36,13 +36,13 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-red-500/30 bg-zinc-950 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-red-500/40 bg-zinc-950 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                 <Image
                   src="/images/logo/zen-emblem.png"
                   alt="Zen PCs Emblem"
                   width={40}
                   height={40}
-                  className="h-full w-full object-cover rounded-full"
+                  className="h-full w-full object-cover rounded-lg"
                 />
               </div>
               <div className="flex flex-col leading-none">

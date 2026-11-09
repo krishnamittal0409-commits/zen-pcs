@@ -22,31 +22,39 @@ const DATABASE_FALLBACK_PCS: ReadyPC[] = [
   {
     id: 1,
     name: "Zen Starter",
-    price: 79999,
+    price: 74999,
     badge: "Best Value",
     image: "/images/pcs/zen-starter.png",
-    specs: ["Ryzen 5 7600", "RTX 4060 8GB", "16GB DDR5", "1TB Gen 4 NVMe SSD"],
+    specs: ["Ryzen 5 7600", "RTX 4060 8GB", "16GB DDR5 5600MHz", "1TB Gen 4 NVMe SSD"],
   },
   {
     id: 2,
     name: "Zen Pro",
-    price: 149999,
+    price: 124999,
     badge: "Best Seller",
     image: "/images/pcs/zen-pro.png",
-    specs: ["Ryzen 7 7800X3D", "RTX 4070 Super", "32GB DDR5", "2TB Gen 4 NVMe SSD"],
+    specs: ["Ryzen 7 7800X3D", "RTX 4070 Super", "32GB DDR5 6000MHz", "2TB Gen 4 NVMe SSD"],
+  },
+  {
+    id: 5,
+    name: "Zen Horizon 5080",
+    price: 349999,
+    badge: "4K Sweet Spot",
+    image: "/images/pcs/zen-pro.png",
+    specs: ["Ryzen 7 7800X3D", "GeForce RTX 5080 16GB GDDR7", "32GB DDR5 6000MHz EXPO", "2TB Gen 4 NVMe SSD"],
   },
   {
     id: 3,
     name: "Zen Ultra",
-    price: 429999,
+    price: 949999,
     badge: "Flagship 4K",
     image: "/images/pcs/zen-ultra.png",
-    specs: ["Ryzen 9 9900X", "RTX 4090 24GB", "64GB DDR5 RAM", "4TB Gen 4 NVMe SSD"],
+    specs: ["Ryzen 9 9900X", "RTX 4090 24GB", "64GB DDR5 RAM", "4TB Gen 5 NVMe SSD"],
   },
   {
     id: 4,
     name: "Zen Apex Titan",
-    price: 1549999,
+    price: 1499999,
     badge: "Apex Sovereign",
     image: "/images/pcs/zen-apex.png",
     specs: ["Ryzen 9 9950X", "Asus Astral RTX 5090", "128GB DDR5 RAM", "4TB PCIe 5.0 NVMe"],
@@ -82,7 +90,12 @@ export default function FeaturedPCs() {
           .order("price", { ascending: true });
 
         if (!error && data && data.length > 0) {
-          setPcs(data as ReadyPC[]);
+          const dbNames = new Set(data.map((p) => p.name.toLowerCase()));
+          const missingFallbacks = DATABASE_FALLBACK_PCS.filter(
+            (fb) => !dbNames.has(fb.name.toLowerCase())
+          );
+          const combined = [...data, ...missingFallbacks].sort((a, b) => a.price - b.price);
+          setPcs(combined as ReadyPC[]);
         }
       } catch (err) {
         console.warn("Using database fallback builds:", err);
