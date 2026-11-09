@@ -74,25 +74,17 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800 bg-black/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        {/* Brand Logo - Premium 3D Metallic Squircle Emblem & Typography */}
-        <Link href="/" className="group flex items-center gap-3">
-          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-red-500/40 bg-zinc-950 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.25)] transition duration-300 group-hover:border-red-500 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+        {/* Brand Logo - Official 3D Graphic Mark from User Artwork */}
+        <Link href="/" className="group flex items-center transition">
+          <div className="relative h-11 w-44 sm:h-12 sm:w-48 transition-transform duration-300 group-hover:scale-105">
             <Image
-              src="/images/logo/zen-emblem.png"
+              src="/images/logo/zen-logo-horizontal-v2.png"
               alt="Zen PCs Logo"
-              width={40}
-              height={40}
-              className="h-full w-full object-cover rounded-lg"
+              fill
+              sizes="200px"
+              className="object-contain object-left"
               priority
             />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-lg font-black tracking-wider text-white">
-              ZEN <span className="text-red-500">PCs</span>
-            </span>
-            <span className="text-[9px] font-bold uppercase tracking-[1.8px] text-zinc-400">
-              Performance Lab
-            </span>
           </div>
         </Link>
 

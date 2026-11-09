@@ -16,7 +16,7 @@ export default function Hero() {
         <div className="text-center lg:col-span-7 lg:text-left">
           <div className="inline-flex items-center gap-2.5 rounded-full border border-red-500/30 bg-red-950/30 px-3.5 py-1 mb-5 shadow-sm shadow-red-950/40">
             <Image
-              src="/images/logo/zen-emblem.png"
+              src="/images/logo/zen-chip-logo-v2.png"
               alt="Zen PCs Emblem"
               width={18}
               height={18}
@@ -75,7 +75,7 @@ export default function Hero() {
             <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 flex items-center gap-2.5 rounded-2xl border border-zinc-800 bg-zinc-950/90 px-3.5 py-2 shadow-2xl backdrop-blur-md">
               <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg border border-red-500/40 bg-zinc-900">
                 <Image
-                  src="/images/logo/zen-emblem.png"
+                  src="/images/logo/zen-chip-logo-v2.png"
                   alt="Zen Logo"
                   fill
                   sizes="28px"

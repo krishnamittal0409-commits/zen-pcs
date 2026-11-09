@@ -35,25 +35,17 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-red-500/40 bg-zinc-950 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <Link href="/" className="inline-block">
+              <div className="relative h-12 w-48 transition-transform duration-300 hover:scale-105">
                 <Image
-                  src="/images/logo/zen-emblem.png"
-                  alt="Zen PCs Emblem"
-                  width={40}
-                  height={40}
-                  className="h-full w-full object-cover rounded-lg"
+                  src="/images/logo/zen-logo-horizontal-v2.png"
+                  alt="Zen PCs Logo"
+                  fill
+                  sizes="200px"
+                  className="object-contain object-left"
                 />
               </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-lg font-black tracking-wider text-white">
-                  ZEN <span className="text-red-500">PCs</span>
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-[1.8px] text-zinc-400">
-                  Performance Lab
-                </span>
-              </div>
-            </div>
+            </Link>
             <p className="text-xs text-zinc-400 leading-relaxed">
               Custom high-performance personal computers, built and benchmarked for gaming,
               streaming, and professional workloads.
