@@ -415,9 +415,9 @@ export default function PCBuilderPage() {
         components.find((c) => c.category === "motherboard" && c.name.includes("X870E")) ||
         components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
       newBuild.ram =
-        components.find((c) => c.category === "ram" && c.name.includes("128GB")) ||
-        components.find((c) => c.category === "ram" && c.name.includes("64GB")) ||
-        components.find((c) => c.category === "ram" && c.name.includes("32GB"));
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("128GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("64GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("32GB"));
       newBuild.storage =
         components.find((c) => c.category === "storage" && c.name.includes("4TB")) ||
         components.find((c) => c.category === "storage" && c.name.includes("Crucial T705")) ||
@@ -442,9 +442,11 @@ export default function PCBuilderPage() {
       newBuild.motherboard =
         components.find((c) => c.category === "motherboard" && c.name.includes("TUF Gaming B650")) ||
         components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
+      // Strictly select DDR5 memory for AM5 platform (G.Skill Trident Z5 Neo RGB 32GB DDR5 6000MHz or Corsair Vengeance DDR5)
       newBuild.ram =
-        components.find((c) => c.category === "ram" && c.name.includes("32GB")) ||
-        components.find((c) => c.category === "ram" && c.name.includes("16GB"));
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("Trident Z5")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("32GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5"));
       newBuild.storage =
         components.find((c) => c.category === "storage" && c.name.includes("2TB")) ||
         components.find((c) => c.category === "storage" && c.name.includes("1TB"));
@@ -452,6 +454,7 @@ export default function PCBuilderPage() {
         components.find((c) => c.category === "psu" && c.name.includes("850")) ||
         components.find((c) => c.category === "psu" && c.name.includes("750"));
       newBuild.cooling =
+        components.find((c) => c.category === "cooling" && c.name.includes("H150")) ||
         components.find((c) => c.category === "cooling" && c.name.includes("360mm")) ||
         components.find((c) => c.category === "cooling" && c.name.includes("AK620"));
       newBuild.case =
@@ -467,11 +470,35 @@ export default function PCBuilderPage() {
       newBuild.motherboard =
         components.find((c) => c.category === "motherboard" && c.name.includes("Pro B650M-P")) ||
         components.find((c) => c.category === "motherboard" && c.name.includes("B650"));
-      newBuild.ram = components.find((c) => c.category === "ram" && c.name.includes("16GB"));
+      // Strictly select DDR5 memory for AM5 platform (Kingston Fury Beast 16GB DDR5 5600MHz)
+      newBuild.ram =
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("16GB")) ||
+        components.find((c) => c.category === "ram" && c.name.includes("DDR5"));
       newBuild.storage = components.find((c) => c.category === "storage" && c.name.includes("1TB"));
       newBuild.psu = components.find((c) => c.category === "psu" && c.name.includes("650"));
       newBuild.cooling = components.find((c) => c.category === "cooling" && c.name.includes("AG400"));
       newBuild.case = components.find((c) => c.category === "case" && c.name.includes("ICE-112"));
+    }
+
+    // Platform Architecture Safeguard: Guarantee RAM generation strictly matches Socket architecture
+    const resolvedSocket =
+      (newBuild.cpu && resolveSocket(newBuild.cpu)) ||
+      (newBuild.motherboard && resolveSocket(newBuild.motherboard));
+
+    if (resolvedSocket === "AM5") {
+      const ramGen = resolveRamGeneration(newBuild.ram);
+      if (ramGen !== "DDR5") {
+        newBuild.ram =
+          components.find((c) => c.category === "ram" && c.name.includes("DDR5") && c.name.includes("32GB")) ||
+          components.find((c) => c.category === "ram" && c.name.includes("DDR5"));
+      }
+    } else if (resolvedSocket === "AM4") {
+      const ramGen = resolveRamGeneration(newBuild.ram);
+      if (ramGen !== "DDR4") {
+        newBuild.ram =
+          components.find((c) => c.category === "ram" && c.name.includes("DDR4") && c.name.includes("32GB")) ||
+          components.find((c) => c.category === "ram" && c.name.includes("DDR4"));
+      }
     }
 
     setBuild(newBuild);
@@ -679,6 +706,11 @@ export default function PCBuilderPage() {
                           {selected.capacity && (
                             <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
                               Capacity: <strong className="text-zinc-200">{selected.capacity}</strong>
+                            </span>
+                          )}
+                          {cat.key === "ram" && (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5">
+                              Standard: <strong className="text-emerald-400">{resolveRamGeneration(selected) || "DDR"}</strong>
                             </span>
                           )}
                         </div>
