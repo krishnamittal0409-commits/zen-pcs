@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -73,14 +74,26 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800 bg-black/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        {/* Brand Logo - Clean, balanced, vertically centered */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 text-sm font-bold text-white">
-            Z
+        {/* Brand Logo - Premium 3D Metallic Emblem & Typography */}
+        <Link href="/" className="group flex items-center gap-3">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-red-500/30 bg-zinc-950 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.25)] transition duration-300 group-hover:border-red-500 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+            <Image
+              src="/images/logo/zen-emblem.png"
+              alt="Zen PCs Logo"
+              width={40}
+              height={40}
+              className="h-full w-full object-cover rounded-full"
+              priority
+            />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">
-            Zen PCs
-          </span>
+          <div className="flex flex-col leading-none">
+            <span className="text-lg font-black tracking-wider text-white">
+              ZEN <span className="text-red-500">PCs</span>
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[1.8px] text-zinc-400">
+              Performance Lab
+            </span>
+          </div>
         </Link>
 
         {/* Navigation - Clean, perfectly aligned */}

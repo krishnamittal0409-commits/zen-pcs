@@ -15,9 +15,18 @@ export default function Hero() {
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-12 lg:flex-row lg:items-center">
         {/* Left Side: Typography & Conversion Deck */}
         <div className="max-w-2xl text-center lg:text-left">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[4px] text-red-500">
-            Welcome to Zen PCs
-          </p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/20 px-3.5 py-1 mb-5">
+            <Image
+              src="/images/logo/zen-emblem.png"
+              alt="Zen PCs Emblem"
+              width={18}
+              height={18}
+              className="rounded-full shrink-0"
+            />
+            <span className="text-[11px] font-bold uppercase tracking-[3px] text-red-400">
+              Welcome to Zen PCs
+            </span>
+          </div>
 
           <h1 className="text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.08]">
             BUILD YOUR <br />
