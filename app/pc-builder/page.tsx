@@ -502,7 +502,7 @@ export default function PCBuilderPage() {
     }
 
     setBuild(newBuild);
-    setToastMessage(`Preloaded ${tier === "titan5090" ? "RTX 5090 Titan" : tier === "sweetspot5080" ? "RTX 5080 Sweetspot" : "Value Esports"} Build!`);
+    setToastMessage(`Preloaded ${tier === "titan5090" ? "RTX 5090 Titan" : tier === "sweetspot5080" ? "Zen Horizon (RTX 5080)" : "Value Esports"} Build!`);
     setTimeout(() => setToastMessage(null), 3500);
   }
 
@@ -576,7 +576,7 @@ export default function PCBuilderPage() {
                 onClick={() => handlePreloadPreset("sweetspot5080")}
                 className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-zinc-300 transition hover:border-red-500 hover:text-white"
               >
-                ⚡ RTX 5080 Sweetspot
+                ⚡ Zen Horizon (RTX 5080)
               </button>
               {selectedCount > 0 && (
                 <button

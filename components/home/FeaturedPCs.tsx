@@ -37,10 +37,10 @@ const DATABASE_FALLBACK_PCS: ReadyPC[] = [
   },
   {
     id: 5,
-    name: "Zen Horizon 5080",
+    name: "Zen Horizon",
     price: 349999,
     badge: "4K Sweet Spot",
-    image: "/images/pcs/zen-pro.png",
+    image: "/images/pcs/zen-horizon.png",
     specs: ["Ryzen 7 7800X3D", "GeForce RTX 5080 16GB GDDR7", "32GB DDR5 6000MHz EXPO", "2TB Gen 4 NVMe SSD"],
   },
   {
